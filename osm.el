@@ -957,7 +957,7 @@ MSG is a message prefix string."
          (selected (or (cdr (assoc
                              (completing-read
                               (format "Matches for '%s': " search)
-                              results nil t nil t)
+                              results nil t nil nil)
                              results))
                        (error "No selection"))))
     (osm-goto (car selected) (cadr selected)
