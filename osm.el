@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 0.2
+;; Version: 0.3
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/osm
 
@@ -38,69 +38,70 @@
   :group 'web
   :prefix "osm-")
 
+(defvar osm--server-defaults
+  '(:min-zoom 2 :max-zoom 19 :max-connections 2 :subdomains ("a" "b" "c"))
+  "Default server properties.")
+
 (defcustom osm-server-list
   '((default
      :name "Mapnik"
      :description "Standard Mapnik map provided by OpenStreetMap"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.org/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png")
     (de
      :name "Mapnik(de)"
      :description "Localized Mapnik map provided by OpenStreetMap Germany"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.de/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png")
     (fr
      :name "Mapnik(fr)"
      :description "Localized Mapnik map by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png")
     (humanitarian
      :name "Humanitarian"
      :description "Humanitarian map provided by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/hot/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png")
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png")
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://[abc].tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
+     :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png")
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
-     :min-zoom 2 :max-zoom 17 :max-connections 2
-     :url "https://[abc].tile.opentopomap.org/%z/%x/%y.png")
+     :url "https://%s.tile.opentopomap.org/%z/%x/%y.png")
     (opvn
-     :name "ÖPNV"
+     :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
-     :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url "http://[abc].tile.memomaps.de/tilegen/%z/%x/%y.png")
+     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png")
     (stamen-watercolor
      :name "Stamen Watercolor"
      :description "Artistic map in watercolor style provided by Stamen"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg")
     (stamen-terrain
-     :name "Stamen Terrain"
+     :name "Stamen Terrain" :max-zoom 18
      :description "Map with hill shading provided by Stamen"
-     :min-zoom 2 :max-zoom 18 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/terrain/%z/%x/%y.png")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png")
     (stamen-toner-dark
      :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner/%z/%x/%y.png")
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png")
     (stamen-toner-light
      :name "Stamen Toner Lite"
      :description "Artistic map in toner style provided by Stamen"
-     :min-zoom 2 :max-zoom 19 :max-connections 2
-     :url "https://stamen-tiles-[abc].a.ssl.fastly.net/toner-lite/%z/%x/%y.png"))
+     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
+
+(defcustom osm-pin-colors
+  '((osm-selected-bookmark "#e20" "#600")
+    (osm-bookmark "#f80" "#820")
+    (osm-center "#08f" "#028")
+    (osm-home "#80f" "#208")
+    (osm-org-link "#7a9" "#254"))
+  "Colors of pins."
+  :type '(alist :key-type symbol :value-type (list string string)))
 
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
@@ -114,6 +115,11 @@
 (defcustom osm-large-step 256
   "Scroll step in pixel."
   :type 'integer)
+
+(defcustom osm-tile-border nil
+  "Display tile borders.
+Useful for debugging."
+  :type 'boolean)
 
 (defcustom osm-small-step 16
   "Scroll step in pixel."
@@ -139,15 +145,21 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
+    (define-key map [osm-home] #'ignore)
+    (define-key map [osm-org-link] #'ignore)
+    (define-key map [osm-center] #'ignore)
+    (define-key map [osm-selected-bookmark] #'ignore)
+    (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
+    (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
+    (define-key map [osm-osm-bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [home] #'osm-home)
     (define-key map "+" #'osm-zoom-in)
     (define-key map "-" #'osm-zoom-out)
     (define-key map " " #'osm-zoom-in)
     (define-key map (kbd "S-SPC") #'osm-zoom-out)
-    (define-key map "\d" #'osm-zoom-out)
-    (define-key map [mouse-1] #'osm-zoom-click)
+    (define-key map [mouse-1] #'osm-center-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
-    (define-key map [S-mouse-3] #'osm-bookmark-delete-click)
     (define-key map [down-mouse-1] #'osm-drag)
     (define-key map [down-mouse-2] #'osm-drag)
     (define-key map [down-mouse-3] #'osm-drag)
@@ -163,14 +175,17 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [M-down] #'osm-down-down)
     (define-key map [M-left] #'osm-left-left)
     (define-key map [M-right] #'osm-right-right)
+    (define-key map "n" #'osm-bookmark-rename)
+    (define-key map "d" #'osm-bookmark-delete)
+    (define-key map "\d" #'osm-bookmark-delete)
     (define-key map "c" #'clone-buffer)
     (define-key map "h" #'osm-home)
     (define-key map "g" #'osm-goto)
     (define-key map "s" #'osm-search)
     (define-key map "t" #'osm-server)
     (define-key map "l" 'org-store-link)
-    (define-key map "B" #'osm-bookmark-set)
-    (define-key map "b" #'osm-bookmark-jump)
+    (define-key map "b" #'osm-bookmark-set)
+    (define-key map "j" #'osm-bookmark-jump)
     (define-key map [remap scroll-down-command] #'osm-down)
     (define-key map [remap scroll-up-command] #'osm-up)
     (define-key map "<" nil)
@@ -202,8 +217,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--cookie 0
   "Tile cache cookie.")
 
-(defvar-local osm--url-index 0
-  "Current url index to query the servers in a round-robin fashion.")
+(defvar-local osm--subdomain-index 0
+  "Subdomain index to query the servers in a round-robin fashion.")
 
 (defvar-local osm--queue nil
   "Download queue of tiles.")
@@ -284,21 +299,18 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--server-property (prop)
   "Return server property PROP."
-  (plist-get (alist-get osm-server osm-server-list) prop))
+  (or (plist-get (alist-get osm-server osm-server-list) prop)
+      (plist-get osm--server-defaults prop)))
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
-  (let ((url (osm--server-property :url))
-        (count 1))
-    (save-match-data
-      (when (string-match "\\`\\(.*\\)\\[\\(.*\\)\\]\\(.*\\)\\'" url)
-        (setq count (- (match-end 2) (match-beginning 2))
-              url (concat (match-string 1 url)
-                          (char-to-string (aref (match-string 2 url) osm--url-index))
-                          (match-string 3 url)))))
+  (let* ((url (osm--server-property :url))
+         (sub (osm--server-property :subdomains))
+         (count (length sub)))
     (prog1
-        (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)))
-      (setq osm--url-index (mod (1+ osm--url-index) count)))))
+        (format-spec url `((?z . ,zoom) (?x . ,x) (?y . ,y)
+                           (?s . ,(nth (mod osm--subdomain-index count) sub))))
+      (setq osm--subdomain-index (mod (1+ osm--subdomain-index) count)))))
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
@@ -321,10 +333,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--download ()
   "Download next tile in queue."
   (when-let (job (and (< (length osm--active)
-                         (* (save-match-data
-                              (if (string-match "\\[\\(.*\\)\\]"
-                                                (osm--server-property :url))
-                                  (- (match-end 1) (match-beginning 1)) 1))
+                         (* (length (osm--server-property :subdomains))
                             (osm--server-property :max-connections)))
                       (pop osm--queue)))
     (push job osm--active)
@@ -381,29 +390,54 @@ Should be at least 7 days according to the server usage policies."
                        (lambda () (eq (car-safe last-input-event) 'mouse-movement))
                        (lambda () (setq track-mouse nil)))))
 
-(defun osm-zoom-click (event)
-  "Zoom to the location of the click EVENT."
+(defun osm--zoom-in-wheel (_n)
+  "Zoom in with the mouse wheel."
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
+    (when (< osm--zoom (osm--server-property :max-zoom))
+      (cl-incf osm--x (/ (- x osm--wx) 2))
+      (cl-incf osm--y (/ (- y osm--wy) 2))
+      (osm-zoom-in))))
+
+(defun osm--zoom-out-wheel (_n)
+  "Zoom out with the mouse wheel."
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
+    (when (> osm--zoom (osm--server-property :min-zoom))
+      (cl-decf osm--x (- x osm--wx))
+      (cl-decf osm--y (- y osm--wy))
+      (osm-zoom-out))))
+
+(defun osm-center-click (event)
+  "Center to the location of the click EVENT."
   (interactive "e")
   (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (when (< osm--zoom (osm--server-property :max-zoom))
       (cl-incf osm--x (- x osm--wx))
       (cl-incf osm--y (- y osm--wy))
-      (setq osm--zoom (1+ osm--zoom)
-            osm--x (* osm--x 2)
-            osm--y (* osm--y 2))
-      (osm--set-transient-pin)
+      (osm--put-transient-pin 'osm-center osm--x osm--y "Center")
       (osm--update))))
 
 (defun osm-bookmark-set-click (event)
   "Create bookmark at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
-               (osm--x (+ osm--x (- x osm--wx)))
-               (osm--y (+ osm--y (- y osm--wy))))
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
+    (osm--put-transient-pin 'osm-selected-bookmark
+                            (+ osm--x (- x osm--wx))
+                            (+ osm--y (- y osm--wy))
+                            "New bookmark")
     (osm-bookmark-set)))
 
-(defun osm-bookmark-delete-click (event)
-  "Delete bookmark at position of click EVENT."
+(defun osm-org-link-click (event)
+  "Store link at position of click EVENT."
+  (interactive "@e")
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
+    (osm--put-transient-pin 'osm-org-link
+                            (+ osm--x (- x osm--wx))
+                            (+ osm--y (- y osm--wy))
+                            "New Org Link")
+    (call-interactively 'org-store-link)))
+
+(defun osm-bookmark-select-click (event)
+  "Select bookmark at position of click EVENT."
   (interactive "@e")
   (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
                (x (+ osm--x (- x osm--wx)))
@@ -416,21 +450,12 @@ Should be at least 7 days according to the server usage policies."
                (p (osm--lon-to-x (cadr coord) osm--zoom))
                (q (osm--lat-to-y (car coord) osm--zoom))
                (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
-          (when (and (< d 400) (< d min))
-            (setq min d found (car bm))))))
-    (unless found
-      (error "No bookmark at point"))
-    (osm-bookmark-delete found)))
-
-(defun osm-org-link-click (event)
-  "Store link at position of click EVENT."
-  (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
-               (osm--x (+ osm--x (- x osm--wx)))
-               (osm--y (+ osm--y (- y osm--wy))))
-    (call-interactively 'org-store-link)
-    (osm--set-transient-pin "#7a9"))
-  (osm--update))
+          (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
+            (setq min d found (list p q (car bm)))))))
+    (when found
+      (message "%s" (caddr found))
+      (apply #'osm--put-transient-pin 'osm-selected-bookmark found)
+      (osm--update))))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -542,99 +567,114 @@ Should be at least 7 days according to the server usage policies."
               buffer-read-only t
               fringe-indicator-alist '((truncation . nil))
               revert-buffer-function #'osm--revert
-              mwheel-scroll-up-function #'osm-down
-              mwheel-scroll-down-function #'osm-up
-              mwheel-scroll-left-function #'osm-left
-              mwheel-scroll-right-function #'osm-right
+              mouse-wheel-progressive-speed nil
+              mwheel-scroll-up-function #'osm--zoom-out-wheel
+              mwheel-scroll-down-function #'osm--zoom-in-wheel
+              mwheel-scroll-left-function #'osm--zoom-out-wheel
+              mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--put-pin (x y color)
-  "Put pin at X/Y with COLOR in pins hash table."
-  (let ((x0 (/ x 256))
-        (y0 (/ y 256)))
-    (push `(,color ,(- x (* x0 256)) . ,(- y (* y0 256)))
-          (gethash (cons x0 y0) osm--pins))
+(defun osm--pin-at-p (x y p q)
+  "Return non-nil if pin P/Q is inside tile X/Y."
+  (setq x (* x 256) y (* y 256))
+  (and (>= p (- x 32)) (< p (+ x 256 32))
+       (>= q y) (< q (+ y 256 64))))
+
+(defun osm--put-pin (pins id x y help)
+  "Put pin at X/Y with HELP and ID in PINS hash table."
+  (let ((x0 (/ x 256)) (y0 (/ y 256)))
+    (push `(,x, y ,id . ,help) (gethash (cons x0 y0) pins))
     (cl-loop
      for i from -1 to 1 do
      (cl-loop
-      for j from -1 to 1 do
-      (let ((x1 (/ (+ x (* 64 i)) 256))
+      for j from -1 to 0 do
+      (let ((x1 (/ (+ x (* 32 i)) 256))
             (y1 (/ (+ y (* 64 j)) 256)))
         (unless (and (= x0 x1) (= y0 y1))
-          (push `(,color ,(- x (* x1 256)) . ,(- y (* y1 256)))
-                (gethash (cons x1 y1) osm--pins))))))))
+          (push `(,x ,y ,id . ,help) (gethash (cons x1 y1) pins))))))))
 
-(defun osm--update-pins ()
-  "Compute pin positions."
-  (setq osm--pins (make-hash-table :test #'equal))
-  (when osm--transient-pin
-    (apply #'osm--put-pin osm--transient-pin))
-  (bookmark-maybe-load-default-file)
-  (dolist (bm bookmark-alist)
-    (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-      (let* ((coord (bookmark-prop-get bm 'coordinates))
-             (x (osm--lon-to-x (cadr coord) osm--zoom))
-             (y (osm--lat-to-y (car coord) osm--zoom)))
-        (osm--put-pin x y "#ff8800")))))
-
-(defun osm--inside-tile-p (x y p q)
-  "Return non-nil if position P/Q is inside tile X/Y."
-  (setq x (* x 256) y (* y 256))
-  (and (>= p (- x 64)) (< p (+ x 256 64))
-       (>= q (- y 64)) (< q (+ y 256 64))))
+(defun osm--get-pins (x y)
+  "Compute pin positions and get pin at X/Y."
+  (unless (eq (car osm--pins) osm--zoom)
+    (let ((pins (make-hash-table :test #'equal)))
+      (osm--put-pin pins 'osm-home
+                    (osm--lon-to-x (cadr osm-home) osm--zoom)
+                    (osm--lat-to-y (car osm-home) osm--zoom)
+                    "Home")
+      (bookmark-maybe-load-default-file)
+      (dolist (bm bookmark-alist)
+        (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+          (let ((coord (bookmark-prop-get bm 'coordinates)))
+            (osm--put-pin pins 'osm-bookmark
+                          (osm--lon-to-x (cadr coord) osm--zoom)
+                          (osm--lat-to-y (car coord) osm--zoom)
+                          (car bm)))))
+      (setq osm--pins (cons osm--zoom pins))))
+  (gethash (cons x y) (cdr osm--pins)))
 
 (autoload 'svg--image-data "svg")
-(defun osm--make-tile (x y)
-  "Make tile at X/Y from FILE."
-  (let ((file (osm--tile-file x y osm--zoom)))
+(defun osm--make-tile (x y tpin)
+  "Make tile at X/Y from FILE.
+TPIN is an optional transient pin."
+  (let ((file (osm--tile-file x y osm--zoom))
+        (pins (osm--get-pins x y)))
     (when (file-exists-p file)
-      `(image
-        :width 256 :height 256
-        ,@(if-let (pins (gethash (cons x y) osm--pins))
-              (list :type 'svg :base-uri file
-                    :data (concat "<svg width='256' height='256' version='1.1'
-xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
-<image xlink:href='"
-                                  (if (> emacs-major-version 27)
-                                      (file-name-nondirectory file)
-                                    ;; NOTE: On Emacs 27, :base-uri and embedding by file
-                                    ;; path is not supported. Use the less efficient base64 encoding.
-                                    (svg--image-data
-                                     file
-                                     (if (member (file-name-extension file) '("jpg" "jpeg"))
-                                         "image/jpeg" "image/png")
-                                     nil))
-                                  "' height='256' width='256'/>"
-                                  (mapconcat
-                                   (pcase-lambda (`(,color ,x . ,y))
-                                     (format "
-<g fill='%s' stroke='#000000' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
+      (if (or osm-tile-border tpin pins)
+          (let* ((areas nil)
+                 (x0 (* 256 x))
+                 (y0 (* 256 y))
+                 (svg-pin
+                  (lambda (pin)
+                    (pcase-let* ((`(,p ,q ,id . ,help) pin)
+                                 (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
+                      (setq p (- p x0) q (- q y0))
+                      (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
+                              ,id (help-echo ,(truncate-string-to-width help 20 0 nil t) pointer hand))
+                            areas)
+                      ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
+                      (format "
+<g fill='%s' stroke='%s' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" color x y)) ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
-                                   pins "")
-                                  "</svg>"))
-            (list :type
-                  (if (member (file-name-extension file) '("jpg" "jpeg"))
-                      'jpeg 'png)
-                  :file file))))))
+</g>" bg fg p q))))
+                 (svg-text
+                  (concat "<svg width='256' height='256' version='1.1'
+xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
+<image xlink:href='"
+                          (if (> emacs-major-version 27)
+                              (file-name-nondirectory file)
+                            ;; NOTE: On Emacs 27, :base-uri and embedding by file
+                            ;; path is not supported. Use the less efficient base64 encoding.
+                            (svg--image-data
+                             file
+                             (if (member (file-name-extension file) '("jpg" "jpeg"))
+                                 "image/jpeg" "image/png")
+                             nil))
+                          "' height='256' width='256'/>"
+                          (mapconcat svg-pin pins "")
+                          (and tpin (funcall svg-pin tpin))
+                          (and osm-tile-border
+                               "<path d='m0 0 l 0 256 256 0' stroke='#000' fill='none'/>")
+                          "</svg>")))
+            (list 'image :width 256 :height 256 :type 'svg :base-uri file :data svg-text :map areas))
+        (list 'image :width 256 :height 256 :file file :type
+              (if (member (file-name-extension file) '("jpg" "jpeg"))
+                  'jpeg 'png))))))
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
-  (if (and osm--transient-pin
-           (osm--inside-tile-p x y
-                               (car osm--transient-pin)
-                               (cadr osm--transient-pin)))
-      (osm--make-tile x y)
+  (if (pcase osm--transient-pin
+        (`(,p ,q . ,_) (osm--pin-at-p x y p q)))
+      (osm--make-tile x y osm--transient-pin)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tiles (gethash key osm--tiles))))
       (if tile
           (progn (setcar tile osm--cookie) (cdr tile))
-        (setq tile (osm--make-tile x y))
+        (setq tile (osm--make-tile x y nil))
         (when tile
           (when osm-max-tiles
             (unless osm--tiles
@@ -677,7 +717,7 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (dolist (buf (buffer-list))
     (when (eq (buffer-local-value 'major-mode buf) #'osm-mode)
       (with-current-buffer buf
-        (when osm--tiles (clrhash osm--tiles))
+        (setq osm--tiles nil osm--pins nil)
         (osm--update)))))
 
 (defun osm--resize (&rest _)
@@ -721,7 +761,6 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (rename-buffer (osm--buffer-name) 'unique)
   (osm--update-sizes)
   (osm--update-header)
-  (osm--update-pins)
   (osm--update-buffer)
   (osm--process-queue)
   (osm--purge-tiles)
@@ -780,20 +819,20 @@ c53 0 96 43 96 96S309 256 256 256z'/>
       (dotimes (_ (- (hash-table-count osm--tiles) osm-max-tiles))
         (remhash (cdr (pop items)) osm--tiles)))))
 
-(defun osm--make-bookmark ()
-  "Make osm bookmark record."
+(defun osm--make-bookmark (&optional name lat lon)
+  "Make osm bookmark record with NAME at LAT/LON."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
-  `(,(osm--bookmark-name)
-    (coordinates ,(osm--lat) ,(osm--lon) ,osm--zoom)
+  `(,(or name (osm--bookmark-name))
+    (coordinates ,(or lat (osm--lat)) ,(or lon (osm--lon)) ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (list (osm--lat) (osm--lon) osm--zoom
-        (and (not (eq osm-server (default-value 'osm-server))) osm-server)
-        (let ((name (string-remove-prefix
-                     "osm: " (osm--bookmark-name (osm--location-name "Org link")))))
+  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'osm-org-link "Org link")))
+    (setq name (string-remove-prefix "osm: " (osm--bookmark-name name)))
+    (list lat lon osm--zoom
+          (and (not (eq osm-server (default-value 'osm-server))) osm-server)
           (if (eq osm-server (default-value 'osm-server))
               (string-remove-suffix (concat " " (osm--server-property :name)) name)
             name))))
@@ -843,21 +882,35 @@ c53 0 96 43 96 96S309 256 256 256z'/>
             osm--zoom (nth 2 at)
             osm--x (osm--lon-to-x (nth 1 at) osm--zoom)
             osm--y (osm--lat-to-y (nth 0 at) osm--zoom))
-      (osm--set-transient-pin))
+      (osm--put-transient-pin 'osm-center osm--x osm--y "Center"))
     (prog1 (pop-to-buffer (current-buffer))
       (osm--update))))
 
-(defun osm--set-transient-pin (&optional color)
-  "Set transient pin to COLOR."
-  (unless osm--transient-pin
-    (let ((buffer (current-buffer))
-          (sym (make-symbol "osm--remove-transient-pin")))
-      (fset sym (lambda ()
-                  (with-current-buffer buffer
-                    (setq osm--transient-pin nil)
-                    (remove-hook 'pre-command-hook sym))))
-      (add-hook 'pre-command-hook sym)
-      (setq osm--transient-pin (list osm--x osm--y (or color "#ff0088"))))))
+(defun osm--put-transient-pin (id x y help)
+  "Set transient pin at X/Y with ID and HELP."
+  (let ((buffer (current-buffer))
+        (sym (make-symbol "osm--remove-transient-pin")))
+    (fset sym (lambda ()
+                (with-current-buffer buffer
+                  ;; Handle bookmark deletion and renaming
+                  (pcase this-command
+                    ((or 'undefined 'ignore)
+                     nil)
+                    ((and (guard (eq id 'osm-selected-bookmark))
+                          cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
+                     (remove-hook 'pre-command-hook sym)
+                     (setq osm--transient-pin nil
+                           this-command
+                           (lambda ()
+                             (interactive)
+                             (funcall cmd help))))
+                    (_
+                     (remove-hook 'pre-command-hook sym)
+                     (when osm--transient-pin
+                       (setq osm--transient-pin nil)
+                       (osm--update)))))))
+    (add-hook 'pre-command-hook sym)
+    (setq osm--transient-pin `(,x ,y ,id . ,help))))
 
 ;;;###autoload
 (defun osm-goto (lat lon zoom)
@@ -886,6 +939,18 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (bookmark-delete bm)
   (osm--revert))
 
+;;;###autoload
+(defun osm-bookmark-rename (old-name)
+  "Rename osm bookmark OLD-NAME."
+  (interactive (list (car (osm--bookmark-read))))
+  (unwind-protect
+      (bookmark-rename
+       old-name
+       (read-from-minibuffer
+        "New name: " old-name nil nil
+        'bookmark-history old-name))
+    (osm--revert)))
+
 (defun osm--bookmark-read ()
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
@@ -905,28 +970,39 @@ c53 0 96 43 96 96S309 256 256 256z'/>
   (interactive)
   (unless (eq major-mode #'osm-mode)
     (error "Not an osm-mode buffer"))
-  (let* ((def (osm--bookmark-name (osm--location-name "Bookmark")))
-         (name (read-from-minibuffer "Bookmark name: " def nil nil nil def)))
-    (bookmark-set name)
-    (message "Stored bookmark: %s" name)
-    (run-at-time 0 nil #'osm--revert)))
+  (unwind-protect
+      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "Bookmark"))
+                   (def (osm--bookmark-name desc))
+                   (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
+                   (bookmark-make-record-function
+                    (lambda () (osm--make-bookmark name lat lon))))
+        (bookmark-set name)
+        (message "Stored bookmark: %s" name))
+    (osm--revert)))
 
-(defun osm--location-name (msg)
-  "Fetch location name of current position.
-MSG is a message prefix string."
-  (message "%s: Fetching name of %.2f %.2f..." msg (osm--lat) (osm--lon))
-  (ignore-errors
-    (alist-get
-     'display_name
-     (json-parse-string
-      (shell-command-to-string
-       (concat
-        "curl -f -s "
-        (shell-quote-argument
-         (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lon=%s&lat=%s"
-                 (min 18 (max 3 osm--zoom)) (osm--lon) (osm--lat)))))
-      :array-type 'list
-      :object-type 'alist))))
+(defun osm--location-data (id help)
+  "Fetch location info for ID with HELP."
+  (unless osm--transient-pin
+    (osm--put-transient-pin id osm--x osm--y help))
+  (let ((lat (osm--y-to-lat (cadr osm--transient-pin) osm--zoom))
+        (lon (osm--x-to-lon (car osm--transient-pin) osm--zoom)))
+    (message "%s: Fetching name of %.2f %.2f..." help lat lon)
+    ;; Redisplay before slow fetching
+    (osm--update)
+    (redisplay)
+    (list lat lon
+          (ignore-errors
+            (alist-get
+             'display_name
+             (json-parse-string
+              (shell-command-to-string
+               (concat
+                "curl -f -s "
+                (shell-quote-argument
+                 (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
+                         (min 18 (max 3 osm--zoom)) lat lon))))
+              :array-type 'list
+              :object-type 'alist))))))
 
 ;;;###autoload
 (defun osm-search ()
@@ -934,7 +1010,8 @@ MSG is a message prefix string."
   (interactive)
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
   (let* ((search (completing-read
-                  "Location: " osm--search-history
+                  "Location: "
+                  (osm--sorted-table osm--search-history)
                   nil nil nil 'osm--search-history))
          (json (json-parse-string
                 (shell-command-to-string
@@ -957,11 +1034,20 @@ MSG is a message prefix string."
          (selected (or (cdr (assoc
                              (completing-read
                               (format "Matches for '%s': " search)
-                              results nil t nil t)
+                              (osm--sorted-table results)
+                              nil t)
                              results))
                        (error "No selection"))))
     (osm-goto (car selected) (cadr selected)
               (apply #'osm--boundingbox-to-zoom (cddr selected)))))
+
+(defun osm--sorted-table (coll)
+  "Sorted completion table from COLL."
+  (lambda (str pred action)
+    (if (eq action 'metadata)
+        '(metadata (display-sort-function . identity)
+                   (cycle-sort-function . identity))
+      (complete-with-action action coll str pred))))
 
 ;;;###autoload
 (defun osm-server (server)
@@ -995,8 +1081,8 @@ MSG is a message prefix string."
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-drag #'osm-zoom-click #'osm-org-link-click
-                    #'osm-bookmark-set-click #'osm-bookmark-delete-click))
+(dolist (sym (list #'osm-drag #'osm-center-click #'osm-org-link-click
+                   #'osm-bookmark-set-click #'osm-bookmark-select-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)

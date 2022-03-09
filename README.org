@@ -31,6 +31,8 @@
 * Configuration
 
 The package is available on GNU ELPA and can be installed with =package-install=.
+The following is an example configuration which relies on =use-package=. Please
+take a look at the [[https://github.com/minad/osm/wiki][wiki]] for additional configuration.
 
 #+begin_src emacs-lisp
   (use-package osm
@@ -38,7 +40,7 @@ The package is available on GNU ELPA and can be installed with =package-install=
            ("C-c m s" . osm-search)
            ("C-c m t" . osm-server)
            ("C-c m g" . osm-goto)
-           ("C-c m b" . osm-bookmark-jump))
+           ("C-c m j" . osm-bookmark-jump))
     :init
     ;; Load Org link support
     (with-eval-after-load 'org
@@ -74,18 +76,20 @@ Key bindings in =osm-mode= buffer:
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
 - ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
-- ~<mouse-1>~: =osm-zoom-click= - Zoom to point
+- ~<mouse-1>~: =osm-center-click= - Center to point
 - ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
 - ~<mouse-3>~: =osm-bookmark-set-click= - Store point as bookmark
-- ~<S-mouse-3>~: =osm-bookmark-delete-click= - Delete bookmark at point
+- ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-drag= - Drag the map with the mouse
+- ~d~, ~DEL~: =osm-bookmark-delete= - Delete selected bookmark
+- ~n~: =osm-bookmark-rename= - Rename selected bookmark
 - ~g~: =osm-goto= - Go to location
 - ~h~: =osm-home= - Go to home location
 - ~s~: =osm-search= - Search for location
 - ~t~: =osm-server= - Select tile server
 - ~l~: =org-store-link= - Store org link
 - ~b~: =osm-bookmark-set= - Set bookmark
-- ~B~: =osm-bookmark-jump= - Jump to bookmark
+- ~j~: =osm-bookmark-jump= - Jump to bookmark
 - ~q~: =quit-window= - Close buffer and window
 - ~c~: =clone-buffer= - Clone buffer
 
@@ -96,6 +100,7 @@ There have been other attempts at map viewers in Emacs before.
 - https://github.com/ruediger/osm-mode
 - https://github.com/svenssonjoel/Emacs-OSM
 - https://github.com/jd/google-maps.el
+- https://github.com/emacsattic/org-osm-link
 
 * Contributions
 
