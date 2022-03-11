@@ -105,6 +105,11 @@
   "Colors of pins."
   :type '(alist :key-type symbol :value-type (list string string)))
 
+(defcustom osm-track-style
+  "stroke:#00A;stroke-width:10;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
+  "SVG style used to draw tracks."
+  :type'string)
+
 (defcustom osm-home
   (let ((lat (bound-and-true-p calendar-latitude))
         (lon (bound-and-true-p calendar-longitude)))
@@ -150,11 +155,13 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [osm-home] #'ignore)
     (define-key map [osm-org-link] #'ignore)
     (define-key map [osm-center] #'ignore)
-    (define-key map [osm-poi] #'ignore)
     (define-key map [osm-selected-bookmark] #'ignore)
     (define-key map [osm-bookmark mouse-1] #'osm-bookmark-select-click)
     (define-key map [osm-bookmark mouse-2] #'osm-bookmark-select-click)
-    (define-key map [osm-osm-bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [osm-bookmark mouse-3] #'osm-bookmark-select-click)
+    (define-key map [osm-poi mouse-1] #'osm-poi-click)
+    (define-key map [osm-poi mouse-2] #'osm-poi-click)
+    (define-key map [osm-poi mouse-3] #'osm-poi-click)
     (define-key map [home] #'osm-home)
     (define-key map "+" #'osm-zoom-in)
     (define-key map "-" #'osm-zoom-out)
@@ -444,26 +451,43 @@ Should be at least 7 days according to the server usage policies."
                             "New Org Link")
     (call-interactively 'org-store-link)))
 
+(defun osm--pin-at (type x y)
+  "Get pin of TYPE at X/Y."
+  (let ((x (+ osm--x (- x osm--wx)))
+        (y (+ osm--y (- y osm--wy)))
+        (min most-positive-fixnum)
+        found)
+    (dolist (pin (car (osm--get-overlays (/ x 256) (/ y 256))))
+      (pcase-let ((`(,p ,q ,id . ,_) pin))
+        (when (eq type id)
+          (let ((d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
+            (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
+              (setq min d found pin))))))
+    found))
+
 (defun osm-bookmark-select-click (event)
   "Select bookmark at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event)))
-               (x (+ osm--x (- x osm--wx)))
-               (y (+ osm--y (- y osm--wy)))
-               (min most-positive-fixnum)
-               (found nil))
-    (dolist (bm bookmark-alist)
-      (when (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-        (let* ((coord (bookmark-prop-get bm 'coordinates))
-               (p (osm--lon-to-x (cadr coord) osm--zoom))
-               (q (osm--lat-to-y (car coord) osm--zoom))
-               (d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
-          (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
-            (setq min d found (list p q (car bm)))))))
-    (when found
-      (message "%s" (caddr found))
-      (apply #'osm--put-transient-pin 'osm-selected-bookmark found)
+  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
+    (when-let (pin (osm--pin-at 'osm-bookmark x y))
+      (message "%s" (cdddr pin))
+      (osm--put-transient-pin 'osm-selected-bookmark
+                              (car pin) (cadr pin)
+                              (cdddr pin))
       (osm--update))))
+
+(defun osm-poi-click (event)
+  "Select point of interest at position of click EVENT."
+  (interactive "@e")
+  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
+    (when-let (pin (osm--pin-at 'osm-poi x y))
+      (message "%s" (cdddr pin))
+      (osm--goto
+       (list
+        (osm--y-to-lat (cadr pin) osm--zoom)
+        (osm--x-to-lon (car pin) osm--zoom)
+        osm--zoom)
+       nil))))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -583,7 +607,7 @@ Should be at least 7 days according to the server usage policies."
               bookmark-make-record-function #'osm--make-bookmark)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
 
-(defun osm--pin-at-p (x y p q)
+(defun osm--pin-inside-p (x y p q)
   "Return non-nil if pin P/Q is inside tile X/Y."
   (setq x (* x 256) y (* y 256))
   (and (>= p (- x 32)) (< p (+ x 256 32))
@@ -626,14 +650,14 @@ Should be at least 7 days according to the server usage policies."
                       (car pt))))
     pins))
 
-;; TODO This is not yet as robust as it should be. Rethink the algorithm.
-;; Sometimes artifacts occur, set osm-tile-border=debug.
+;; TODO The Bresenham algorithm used here to add the line segments
+;; to the tiles has the issue that lines which go along a tile
+;; border may be drawn only partially. We can fix this by starting
+;; Bresenham at (x0±line width, y0±line width).
 (defun osm--compute-tracks ()
   "Compute track hash table."
-  (let ((tracks (make-hash-table :test #'equal))
-        (segs (make-hash-table :test #'equal)))
+  (let ((tracks (make-hash-table :test #'equal)))
     (dolist (file osm--gpx-files)
-      (clrhash segs)
       (dolist (seg (cadr file))
         (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
                         (osm--lat-to-y (caar seg) osm--zoom))))
@@ -645,43 +669,33 @@ Should be at least 7 days according to the server usage policies."
               ;; Ignore point if too close to last point
               (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
                 (let* ((p1 (cons px1 py1))
+                       (seg (cons p0 p1))
                        (x0 (/ (car p0) 256))
                        (y0 (/ (cdr p0) 256))
                        (x1 (/ px1 256))
                        (y1 (/ py1 256))
-                       (dx (abs (- x1 x0)))
-                       (dy (- (abs (- y1 y0))))
                        (sx (if (< x0 x1) 1 -1))
                        (sy (if (< y0 y1) 1 -1))
+                       (dx (* sx (- x1 x0)))
+                       (dy (* sy (- y0 y1)))
                        (err (+ dx dy)))
-                ;; Bresenham with "antialiasing"
-                (while
-                    (let ((ex (< (* err 2) dx))
-                          (ey (> (* err 2) dy))
-                          (key (cons x0 y0)))
-                      (unless (equal (gethash key segs) p0)
-                        (push p0 (gethash key segs)))
-                      (push p1 (gethash key segs))
-                      (unless (and (= x0 x1) (= y0 y1))
-                        ;; "Antialiasing"
-                        (when (and ey ex)
-                          (setq key (cons (+ x0 sx) y0))
-                          (unless (equal (gethash key segs) p0)
-                            (push p0 (gethash key segs)))
-                          (push p1 (gethash key segs))
-                          (setq key (cons x0 (+ y0 sy)))
-                          (unless (equal (gethash key segs) p0)
-                            (push p0 (gethash key segs)))
-                          (push p1 (gethash key segs)))
-                        (when ey
-                          (cl-incf err dy)
-                          (cl-incf x0 sx))
-                        (when ex
-                          (cl-incf err dx)
-                          (cl-incf y0 sy))
-                        t)))
-                (setq p0 p1)))))))
-      (maphash (lambda (k v) (push v (gethash k tracks))) segs))
+                  ;; Bresenham
+                  (while
+                      (let ((ey (> (* err 2) dy))
+                            (ex (< (* err 2) dx)))
+                        (push seg (gethash (cons x0 y0) tracks))
+                        (unless (and (= x0 x1) (= y0 y1))
+                          (when (and ey ex)
+                            (push seg (gethash (cons x0 (+ y0 sy)) tracks))
+                            (push seg (gethash (cons (+ x0 sx) y0) tracks)))
+                          (when ey
+                            (cl-incf err dy)
+                            (cl-incf x0 sx))
+                          (when ex
+                            (cl-incf err dx)
+                            (cl-incf y0 sy))
+                          t)))
+                  (setq p0 p1))))))))
     tracks))
 
 (defun osm--get-overlays (x y)
@@ -696,13 +710,13 @@ Should be at least 7 days according to the server usage policies."
     (and (or pins tracks) (cons pins tracks))))
 
 (autoload 'svg--image-data "svg")
-(defun osm--make-tile (x y tpin)
+(defun osm--draw-tile (x y tpin)
   "Make tile at X/Y from FILE.
 TPIN is an optional transient pin."
   (let ((file (osm--tile-file x y osm--zoom))
-        (overlays (osm--get-overlays x y)))
+        overlays)
     (when (file-exists-p file)
-      (if (or (eq osm-tile-border t) tpin overlays)
+      (if (or (setq overlays (osm--get-overlays x y)) (eq osm-tile-border t) tpin)
           (let* ((areas nil)
                  (x0 (* 256 x))
                  (y0 (* 256 y))
@@ -737,15 +751,21 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                  "image/jpeg" "image/png")
                              nil))
                           "' height='256' width='256'/>"
-                          (mapconcat
-                           (lambda (seg)
-                             (format "<path stroke='#00A' stroke-width='10' stroke-linejoin='round' stroke-linecap='round' opacity='0.4' fill='none' d='M%s %s %s'/>"
-                                     (- (caar seg) x0) (- (cdar seg) y0)
-                                     (mapconcat
-                                      (pcase-lambda (`(,x . ,y))
-                                        (format " L %s %s" (- x x0) (- y y0)))
-                                      (cdr seg) "")))
-                           (cdr overlays) "")
+                          (when-let (track (cdr overlays))
+                            (format
+                             "<path style='%s' d='%s'/>"
+                             osm-track-style
+                             (let (last)
+                               (mapconcat
+                                (pcase-lambda (`(,beg . ,end))
+                                  (prog1
+                                      (if (equal beg last)
+                                          (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
+                                        (format "M%s %sL%s %s"
+                                                (- (car beg) x0) (- (cdr beg) y0)
+                                                (- (car end) x0) (- (cdr end) y0)))
+                                    (setq last end)))
+                                track ""))))
                           (pcase-exhaustive osm-tile-border
                             ('nil nil)
                             ('debug "<path d='M 1 1 L 1 255 255 255 255 1 Z' stroke='#000' stroke-width='2' fill='none'/>")
@@ -761,13 +781,13 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (if (pcase osm--transient-pin
-        (`(,p ,q . ,_) (osm--pin-at-p x y p q)))
-      (osm--make-tile x y osm--transient-pin)
+        (`(,p ,q . ,_) (osm--pin-inside-p x y p q)))
+      (osm--draw-tile x y osm--transient-pin)
     (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
            (tile (and osm--tile-cache (gethash key osm--tile-cache))))
       (if tile
           (progn (setcar tile osm--tile-cookie) (cdr tile))
-        (setq tile (osm--make-tile x y nil))
+        (setq tile (osm--draw-tile x y nil))
         (when tile
           (when osm-max-tiles
             (unless osm--tile-cache
