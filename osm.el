@@ -39,9 +39,15 @@
   :group 'web
   :prefix "osm-")
 
-(defvar osm--server-defaults
+(defcustom osm-curl-options
+  "--fail --location --silent"
+  "Additional Curl command line options."
+  :type 'string)
+
+(defcustom osm-server-defaults
   '(:min-zoom 2 :max-zoom 19 :max-connections 2 :subdomains ("a" "b" "c"))
-  "Default server properties.")
+  "Default server properties."
+  :type 'plist)
 
 (defcustom osm-server-list
   '((default
@@ -170,9 +176,9 @@ Should be at least 7 days according to the server usage policies."
     (define-key map [mouse-1] #'osm-center-click)
     (define-key map [mouse-2] #'osm-org-link-click)
     (define-key map [mouse-3] #'osm-bookmark-set-click)
-    (define-key map [down-mouse-1] #'osm-drag)
-    (define-key map [down-mouse-2] #'osm-drag)
-    (define-key map [down-mouse-3] #'osm-drag)
+    (define-key map [down-mouse-1] #'osm-mouse-drag)
+    (define-key map [down-mouse-2] #'osm-mouse-drag)
+    (define-key map [down-mouse-3] #'osm-mouse-drag)
     (define-key map [up] #'osm-up)
     (define-key map [down] #'osm-down)
     (define-key map [left] #'osm-left)
@@ -315,7 +321,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--server-property (prop)
   "Return server property PROP."
   (or (plist-get (alist-get osm-server osm-server-list) prop)
-      (plist-get osm--server-defaults prop)))
+      (plist-get osm-server-defaults prop)))
 
 (defun osm--tile-url (x y zoom)
   "Return tile url for coordinate X, Y and ZOOM."
@@ -364,7 +370,7 @@ Should be at least 7 days according to the server usage policies."
        :connection-type 'pipe
        :noquery t
        :command
-       (list "curl" "-f" "-s" "-o" tmp (osm--tile-url x y zoom))
+       `("curl" ,@(split-string osm-curl-options) "--output" ,tmp ,(osm--tile-url x y zoom))
        :filter #'ignore
        :sentinel
        (lambda (_proc status)
@@ -380,7 +386,7 @@ Should be at least 7 days according to the server usage policies."
              (osm--download)))))
       (osm--download))))
 
-(defun osm-drag (event)
+(defun osm-mouse-drag (event)
   "Handle drag EVENT."
   (interactive "@e")
   (pcase-let ((`(,sx . ,sy) (posn-x-y (event-start event)))
@@ -396,6 +402,9 @@ Should be at least 7 days according to the server usage policies."
           (define-key map [mouse-1] #'ignore)
           (define-key map [mouse-2] #'ignore)
           (define-key map [mouse-3] #'ignore)
+          (define-key map [drag-mouse-1] #'ignore)
+          (define-key map [drag-mouse-2] #'ignore)
+          (define-key map [drag-mouse-3] #'ignore)
           (pcase-let ((`(,ex . ,ey) (posn-x-y event)))
             (setq osm--x (- sx ex)
                   osm--y (- sy ey))
@@ -492,6 +501,7 @@ Should be at least 7 days according to the server usage policies."
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
   (interactive "p")
+  (osm--barf-unless-osm)
   (setq n (or n 1))
   (cl-loop for i from n above 0
            if (< osm--zoom (osm--server-property :max-zoom)) do
@@ -512,11 +522,11 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--move (dx dy step)
   "Move by DX/DY with STEP size."
-  (setq
-   osm--x (min (* 256 (1- (expt 2 osm--zoom)))
-               (max 0 (+ osm--x (* dx step))))
-   osm--y (min (* 256 (1- (expt 2 osm--zoom)))
-               (max 0 (+ osm--y (* dy step)))))
+  (osm--barf-unless-osm)
+  (setq osm--x (min (* 256 (1- (expt 2 osm--zoom)))
+                    (max 0 (+ osm--x (* dx step))))
+        osm--y (min (* 256 (1- (expt 2 osm--zoom)))
+                    (max 0 (+ osm--y (* dy step)))))
   (osm--update))
 
 (defun osm-right (&optional n)
@@ -605,7 +615,25 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--make-bookmark)
+  (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
+  (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
+
+(defun osm--barf-write ()
+  "Barf for write operation."
+  (set-buffer-modified-p nil)
+  (setq buffer-read-only t)
+  (set-visited-file-name nil)
+  (error "Writing the buffer to a file is not supported"))
+
+(defun osm--barf-change-mode ()
+  "Barf for change mode operation."
+  (error "Changing the major mode is not supported"))
+
+(defun osm--barf-unless-osm ()
+  "Barf if not an `osm-mode' buffer."
+  (unless (eq major-mode #'osm-mode)
+    (error "Not an osm-mode buffer")))
 
 (defun osm--pin-inside-p (x y p q)
   "Return non-nil if pin P/Q is inside tile X/Y."
@@ -869,8 +897,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--update ()
   "Update map display."
-  (unless (eq major-mode #'osm-mode)
-    (error "Not an osm-mode buffer"))
+  (osm--barf-unless-osm)
   (rename-buffer (osm--buffer-name) 'unique)
   (osm--update-sizes)
   (osm--update-header)
@@ -1081,8 +1108,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm-bookmark-set ()
   "Create osm bookmark."
   (interactive)
-  (unless (eq major-mode #'osm-mode)
-    (error "Not an osm-mode buffer"))
+  (osm--barf-unless-osm)
   (unwind-protect
       (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "Bookmark"))
                    (def (osm--bookmark-name desc))
@@ -1110,7 +1136,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
              (json-parse-string
               (shell-command-to-string
                (concat
-                "curl -f -s "
+                "curl " osm-curl-options " "
                 (shell-quote-argument
                  (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
                          (min 18 (max 3 osm--zoom)) lat lon))))
@@ -1128,10 +1154,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                   nil nil nil 'osm--search-history))
          (json (json-parse-string
                 (shell-command-to-string
-                 (concat "curl -f -s "
-                         (shell-quote-argument
-                          (concat "https://nominatim.openstreetmap.org/search?format=json&q="
-                                  (url-encode-url search)))))
+                 (concat
+                  "curl " osm-curl-options " "
+                  (shell-quote-argument
+                   (concat "https://nominatim.openstreetmap.org/search?format=json&q="
+                           (url-encode-url search)))))
                 :array-type 'list
                 :object-type 'alist))
          (results (mapcar
@@ -1208,6 +1235,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                                       (or osm--gpx-files
                                           (error "No GPX files shown"))
                                       nil t nil 'file-name-history)))
+  (osm--barf-unless-osm)
   (setq osm--gpx-files (assoc-delete-all file osm--gpx-files))
   (osm--revert))
 
@@ -1241,10 +1269,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-drag #'osm-center-click #'osm-org-link-click
-                   #'osm-bookmark-set-click #'osm-bookmark-select-click))
+(dolist (sym (list #'osm-mouse-drag #'osm-center-click #'osm-org-link-click
+                   #'osm-poi-click #'osm-bookmark-set-click #'osm-bookmark-select-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)
