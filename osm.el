@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 0.4
+;; Version: 0.5
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/osm
 
@@ -164,7 +164,10 @@
         (list lat lon 12)
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
-  :type '(list number number number))
+  :type '(list :tag "Coordinates"
+          (number :tag "Latitude  ")
+          (number :tag "Longitude ")
+          (number :tag "Zoom      ")))
 
 (defcustom osm-large-step 256
   "Scroll step in pixel."
@@ -240,6 +243,7 @@ Should be at least 7 days according to the server usage policies."
     (define-key map "t" #'osm-goto)
     (define-key map "s" #'osm-search)
     (define-key map "v" #'osm-server)
+    (define-key map "e" #'osm-elisp-link)
     (define-key map "l" 'org-store-link)
     (define-key map "b" #'osm-bookmark-set)
     (define-key map "j" #'osm-bookmark-jump)
@@ -252,9 +256,53 @@ Should be at least 7 days according to the server usage policies."
     map)
   "Keymap used by `osm-mode'.")
 
+(defvar osm-server-menu
+  `(menu-item
+    "Server menu" nil
+    :filter
+    (lambda (&optional _)
+      (let (menu last-group)
+        (dolist (server osm-server-list)
+          (let* ((plist (cdr server))
+                 (group (plist-get plist :group)))
+            (unless (equal last-group group)
+              (push (format "─── %s ───" group) menu)
+              (setq last-group group))
+            (push
+             `[,(plist-get plist :name)
+               (osm-server ',(car server))
+               :style toggle
+               :selected (eq osm-server ',(car server))]
+             menu)))
+        (easy-menu-filter-return (nreverse menu)))))
+  "Server menu.")
+
+(easy-menu-define osm-menu osm-mode-map
+  "Menu for `osm-mode."
+  `("Osm mode"
+    ["Home" osm-home t]
+    ["Go to" osm-goto t]
+    ["Search" osm-search t]
+    ["Server" osm-server t]
+    "--"
+    ["Org Link" org-store-link t]
+    ["Elisp Link" osm-elisp-link t]
+    ("Bookmark"
+     ["Set" osm-bookmark-set t]
+     ["Jump" osm-bookmark-jump t]
+     ["Rename" osm-bookmark-rename t]
+     ["Delete" osm-bookmark-delete t])
+    "--"
+    ["Show GPX" osm-gpx-show t]
+    ["Hide GPX" osm-gpx-hide t]
+    "--"
+    ["Clone" clone-buffer t]
+    ["Revert" revert-buffer t]
+    ["Customize" (customize-group 'osm) t]))
+
 (defconst osm--placeholder
   '(:type svg :width 256 :height 256
-    :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
+          :data "<svg width='256' height='256' version='1.1' xmlns='http://www.w3.org/2000/svg'>
   <defs>
     <pattern id='grid' width='16' height='16'  patternUnits='userSpaceOnUse'>
       <path d='m 0 0 l 0 16 16 0' fill='none' stroke='#888888'/>
@@ -314,9 +362,6 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
-
-(defvar-local osm--copyright-overlay nil
-  "Overlay used for the copyright message.")
 
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
@@ -639,6 +684,10 @@ Should be at least 7 days according to the server usage policies."
   (dolist (type '(svg jpeg png))
     (unless (image-type-available-p type)
       (warn "osm: Support for %s images is missing" type)))
+  (unless (libxml-available-p)
+    (warn "osm: libxml is not available"))
+  (unless (json-available-p)
+    (warn "osm: libjansson is not available"))
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
@@ -915,9 +964,14 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (propertize text
               'keymap (let ((map (make-sparse-keymap)))
                         (define-key map [header-line mouse-1]
-                          (lambda ()
-                            (interactive "@")
-                            (call-interactively action)))
+                          `(menu-item
+                            ""
+                            nil :filter
+                            ,(lambda (&optional _)
+                               (select-window
+                                (posn-window
+                                 (event-start last-input-event)))
+                               action)))
                         map)
               'face '(:box (:line-width -2 :style released-button))
               'mouse-face '(:box (:line-width -2 :style pressed-button))))
@@ -945,13 +999,16 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                   'display `(space :width (,(floor (/ meter meter-per-pixel)))))
       (propertize " " 'face '(:inverse-video t)
                   'display '(space :width (3)))
-      (propertize " " 'display `(space :align-to (- right ,(+ 13 (length server)) (10))))
+      (propertize " " 'display `(space :align-to
+                                       (- right ,(+ 5 3 3 2 (length server) 3) (,(+ 4 1 4 1 4 1 4)))))
       (format " Z%-2d " osm--zoom)
       (osm--header-button " + " #'osm-zoom-in)
       (propertize " " 'display '(space :width (1)))
       (osm--header-button " - " #'osm-zoom-out)
       (propertize " " 'display '(space :width (1)))
-      (osm--header-button (format " %s " server) #'osm-server)))))
+      (osm--header-button (format " %s " server) osm-server-menu)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button " ☰ " osm-menu)))))
 
 (defun osm--update ()
   "Update map display."
@@ -960,7 +1017,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
-  (osm--display-copyright)
+  (osm--update-copyright)
   (osm--process-download-queue)
   (osm--purge-tile-cache)
   (osm--purge-directory))
@@ -975,36 +1032,46 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
           osm--nx (1+ (ceiling win-width 256))
           osm--ny (1+ (ceiling win-height 256)))))
 
-(defun osm--format-link (text url)
+(defun osm--copyright-link (text url)
   "Format link with TEXT to URL."
-  (propertize text 'face 'button
-              'keymap (let ((map (make-sparse-keymap)))
-                        (define-key map [mouse-1]
-                          (lambda ()
-                            (interactive "@")
-                            (browse-url url)))
-                        map)))
+  (propertize text
+              'face 'button
+              'mouse-face 'highlight
+              'help-echo
+              (format "Go to %s" url)
+              'keymap
+              (let ((map (make-sparse-keymap)))
+                (define-key map [tab-line mouse-1]
+                  (lambda ()
+                    (interactive)
+                    (browse-url url)))
+                map)))
 
-(defun osm--display-copyright ()
-  "Display copyright info."
-  (when osm--copyright-overlay (delete-overlay osm--copyright-overlay))
-  (when-let (copyright (and osm-copyright (osm--server-property :copyright)))
-    (setq copyright (replace-regexp-in-string
-                     "{\\(.*?\\)|\\(.*?\\)}"
-                     (lambda (str)
-                       (osm--format-link
-                        (match-string 1 str)
-                        (match-string 2 str)))
-                     (concat (if (listp copyright)
-                                 (string-join copyright " | ")
-                               copyright)
-                             "\n")))
-    (setq osm--copyright-overlay (make-overlay (point-min) (point-min)))
-    (add-face-text-property
-     0 (length copyright)
-     '(:inherit variable-pitch :height 0.75)
-     t copyright)
-    (overlay-put osm--copyright-overlay 'before-string copyright)))
+(defun osm--update-copyright ()
+  "Update copyright info."
+  (let ((copyright (and osm-copyright (osm--server-property :copyright))))
+    (if (not copyright)
+        (when (eq 'osm-copyright (car-safe tab-line-format))
+          (kill-local-variable 'tab-line-format))
+      (setq copyright (replace-regexp-in-string
+                       "{\\(.*?\\)|\\(.*?\\)}"
+                       (lambda (str)
+                         (osm--copyright-link
+                          (match-string 1 str)
+                          (match-string 2 str)))
+                       (concat
+                        " "
+                        (if (listp copyright)
+                            (string-join copyright " | ")
+                          copyright)
+                        (propertize " "
+                                    'display
+                                    '(space :align-to right)))))
+      (add-face-text-property
+       0 (length copyright)
+       '(:inherit (header-line variable-pitch) :height 0.75)
+       t copyright)
+      (setq-local tab-line-format (list 'osm-copyright copyright)))))
 
 (defun osm--update-buffer ()
   "Update buffer display."
@@ -1124,7 +1191,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                 (with-current-buffer buffer
                   ;; Handle bookmark deletion and renaming
                   (pcase this-command
-                    ((or 'undefined 'ignore)
+                    ((or 'undefined 'ignore
+                         'mouse-drag-mode-line 'mouse-drag-header-line
+                         'keyboard-escape-quit 'keyboard-quit)
                      nil)
                     ((and (guard (eq id 'osm-selected-bookmark))
                           cmd (or 'osm-bookmark-delete 'osm-bookmark-rename))
@@ -1153,7 +1222,18 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (unless (and (numberp lat) (numberp lon) (numberp zoom))
        (error "Invalid coordinate"))
      (list lat lon zoom)))
-  (osm--goto (list lat lon zoom) nil))
+  (osm--goto (list lat lon zoom) nil)
+  nil)
+
+;;;###autoload
+(defmacro osm (lat lon zoom &optional server comment)
+  "Go to LAT/LON/ZOOM.
+Optionally specify a SERVER and a COMMENT."
+  (ignore comment)
+  (when (stringp server) (setq server nil)) ;; Ignore comment
+  `(progn
+     (osm--goto (list ,lat ,lon ,zoom) ,(and server (symbolp server) `',server))
+     '(osm ,lat ,lon ,zoom ,@(and server (symbolp server) (list server)))))
 
 ;;;###autoload
 (defun osm-bookmark-jump (bm)
@@ -1385,9 +1465,23 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                              (error "No server selected"))))))
   (osm--goto nil server))
 
+(defun osm-elisp-link ()
+  "Store coordinates as an Elisp link in the kill ring."
+  (interactive)
+  (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-org-link "Elisp link"))
+               (link (format "(osm %.6f %.6f %s%s%s)"
+                             lat lon osm--zoom
+                             (if (eq osm-server (default-value 'osm-server))
+                                 ""
+                               (format " %s" osm-server))
+                             (if name (format " %S" name) ""))))
+    (kill-new link)
+    (message "Stored link in the kill ring")))
+
 (dolist (sym (list #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
+                   #'osm-elisp-link))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-center-click #'osm-org-link-click
                    #'osm-poi-click #'osm-bookmark-set-click #'osm-bookmark-select-click))
