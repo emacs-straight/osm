@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 0.5
+;; Version: 0.6
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/osm
 
@@ -686,8 +686,9 @@ Should be at least 7 days according to the server usage policies."
       (warn "osm: Support for %s images is missing" type)))
   (unless (libxml-available-p)
     (warn "osm: libxml is not available"))
-  (unless (json-available-p)
-    (warn "osm: libjansson is not available"))
+  ;; json-available-p is not available on Emacs 27
+  ;; (unless (json-available-p)
+  ;;   (warn "osm: libjansson is not available"))
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
@@ -1333,13 +1334,13 @@ Optionally specify a SERVER and a COMMENT."
                 :object-type 'alist))
          (results (mapcar
                    (lambda (x)
-                     `(,(format "%s (%s° %s°)"
-                                (alist-get 'display_name x)
-                                (alist-get 'lat x)
-                                (alist-get 'lon x))
-                       ,(string-to-number (alist-get 'lat x))
-                       ,(string-to-number (alist-get 'lon x))
-                       ,@(mapcar #'string-to-number (alist-get 'boundingbox x))))
+                     (let ((lat (string-to-number (alist-get 'lat x)))
+                           (lon (string-to-number (alist-get 'lon x))))
+                       `(,(format "%s (%.6f° %.6f°)"
+                                  (alist-get 'display_name x)
+                                  lat lon)
+                         ,lat ,lon
+                         ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or json (error "No results"))))
          (selected (or (cdr (assoc
                              (completing-read
