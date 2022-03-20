@@ -1304,35 +1304,32 @@ Optionally specify a SERVER and a COMMENT."
           (ignore-errors
             (alist-get
              'display_name
-             (json-parse-string
-              (shell-command-to-string
-               (concat
-                "curl " osm-curl-options " "
-                (shell-quote-argument
-                 (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
-                         (min 18 (max 3 osm--zoom)) lat lon))))
-              :array-type 'list
-              :object-type 'alist))))))
+             (osm--get-json
+              (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
+                      (min 18 (max 3 osm--zoom)) lat lon)))))))
+
+(defun osm--get-json (url)
+  "Get json from URL."
+  (json-parse-string
+   (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
+     (shell-command-to-string
+      (concat
+       "curl " osm-curl-options " "
+       (shell-quote-argument url))))
+   :array-type 'list
+   :object-type 'alist))
 
 ;;;###autoload
-(defun osm-search ()
-  "Search for location and display the map."
-  (interactive)
+(defun osm-search (search &optional lucky)
+  "Search for SEARCH and display the map.
+If the prefix argument LUCKY is non-nil take the first result and jump there."
+  (interactive
+   (list (completing-read "Location: "
+                          (osm--sorted-table osm--search-history)
+                          nil nil nil 'osm--search-history)
+         current-prefix-arg))
   ;; TODO add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((search (completing-read
-                  "Location: "
-                  (osm--sorted-table osm--search-history)
-                  nil nil nil 'osm--search-history))
-         (json (json-parse-string
-                (shell-command-to-string
-                 (concat
-                  "curl " osm-curl-options " "
-                  (shell-quote-argument
-                   (concat "https://nominatim.openstreetmap.org/search?format=json&q="
-                           (url-encode-url search)))))
-                :array-type 'list
-                :object-type 'alist))
-         (results (mapcar
+  (let* ((results (mapcar
                    (lambda (x)
                      (let ((lat (string-to-number (alist-get 'lat x)))
                            (lon (string-to-number (alist-get 'lon x))))
@@ -1341,8 +1338,14 @@ Optionally specify a SERVER and a COMMENT."
                                   lat lon)
                          ,lat ,lon
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
-                   (or json (error "No results"))))
-         (selected (or (cdr (assoc
+                   (or
+                    (osm--get-json
+                     (concat "https://nominatim.openstreetmap.org/search?format=json&q="
+                             (url-encode-url search)))
+                    (error "No results"))))
+         (selected (or
+                    (and (or lucky (not (cdr results))) (cdar results))
+                    (cdr (assoc
                              (completing-read
                               (format "Matches for '%s': " search)
                               (osm--sorted-table results)
