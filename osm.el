@@ -166,9 +166,9 @@
       (list 0 0 3)))
   "Home coordinates, latitude, longitude and zoom level."
   :type '(list :tag "Coordinates"
-          (number :tag "Latitude  ")
-          (number :tag "Longitude ")
-          (number :tag "Zoom      ")))
+               (number :tag "Latitude  ")
+               (number :tag "Longitude ")
+               (number :tag "Zoom      ")))
 
 (defcustom osm-large-step 256
   "Scroll step in pixel."
@@ -1011,7 +1011,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--update ()
   "Update map display."
   (osm--barf-unless-osm)
-  (rename-buffer (osm--buffer-name) 'unique)
+  (osm--rename-buffer)
   (osm--update-sizes)
   (osm--update-header)
   (osm--update-buffer)
@@ -1135,11 +1135,16 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
               (string-remove-suffix (concat " " (osm--server-property :name)) name)
             name))))
 
-(defun osm--buffer-name ()
-  "Return buffer name."
-  (format "*osm: %.2f° %.2f° Z%s %s*"
-          osm--lat osm--lon osm--zoom
-          (osm--server-property :name)))
+(defun osm--rename-buffer ()
+  "Rename current buffer."
+  (setq list-buffers-directory
+        (format "%.6f° %.6f° Z%s %s"
+                osm--lat osm--lon osm--zoom
+                (osm--server-property :name)))
+  (rename-buffer (format "*osm: %.2f° %.2f° Z%s %s*"
+                         osm--lat osm--lon osm--zoom
+                         (osm--server-property :name))
+                 'unique))
 
 (defun osm--bookmark-name (&optional loc)
   "Return bookmark name with optional LOC name."
@@ -1222,8 +1227,8 @@ Optionally place transient pin with ID and NAME."
      (setq server (car server))
      (unless (and server (symbolp server)) (setq server nil)) ;; Ignore comment
      `(progn
-       (osm--goto ,lat ,lon ,zoom ',server 'osm-link "Elisp Link")
-       '(osm ,lat ,lon ,zoom ,@(and server (list server)))))
+        (osm--goto ,lat ,lon ,zoom ',server 'osm-link "Elisp Link")
+        '(osm ,lat ,lon ,zoom ,@(and server (list server)))))
     ((and `(,search) (guard (stringp search)))
      `(progn
         (osm-search ,search)
@@ -1236,8 +1241,8 @@ Optionally place transient pin with ID and NAME."
   (interactive (list (osm--bookmark-read)))
   (let ((coords (bookmark-prop-get bm 'coordinates)))
     (set-buffer (osm--goto (nth 0 coords) (nth 1 coords) (nth 2 coords)
-                               (bookmark-prop-get bm 'server)
-                               'osm-selected-bookmark (car bm)))))
+                           (bookmark-prop-get bm 'server)
+                           'osm-selected-bookmark (car bm)))))
 
 ;;;###autoload
 (defun osm-bookmark-delete (bm)
@@ -1286,6 +1291,10 @@ Optionally place transient pin with ID and NAME."
         (bookmark-set name)
         (message "Stored bookmark: %s" name))
     (osm--revert)))
+
+(defun osm--location-str ()
+  "Returns the current location as a string."
+  (format "%.2f° %.2f° Z%s" osm--lat osm--lon osm--zoom))
 
 (defun osm--location-data (id name)
   "Fetch location info for ID with NAME."
@@ -1347,7 +1356,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                       (osm--sorted-table results)
                       nil t)
                      results)
-                   (error "No selection"))))
+                    (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
                (apply #'osm--boundingbox-to-zoom (cdddr selected))
                nil 'osm-transient (car selected))))
