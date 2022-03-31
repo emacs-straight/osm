@@ -26,7 +26,14 @@
 
 ;;; Commentary:
 
-;; OpenStreetMap viewer
+;; Osm.el is a tile-based map viewer, with a responsive moveable and
+;; zoomable display. The map can be controlled with the keyboard or with
+;; the mouse. The viewer fetches the map tiles in parallel from tile
+;; servers via the `curl' program. The package comes with a list of
+;; multiple preconfigured tile servers. You can bookmark your favorite
+;; locations using regular Emacs bookmarks or create links from Org
+;; files to locations. Furthermore the package provides commands to
+;; search for locations by name and to open and display GPX tracks.
 
 ;;; Code:
 
@@ -709,7 +716,7 @@ Should be at least 7 days according to the server usage policies."
               mwheel-scroll-down-function #'osm--zoom-in-wheel
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
-              bookmark-make-record-function #'osm--make-bookmark)
+              bookmark-make-record-function #'osm--bookmark-record-default)
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
   (add-hook 'write-contents-functions #'osm--barf-write nil 'local)
   (add-hook 'window-size-change-functions #'osm--resize nil 'local))
@@ -1117,18 +1124,24 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (dotimes (_ (- (hash-table-count osm--tile-cache) osm-max-tiles))
         (remhash (cdr (pop items)) osm--tile-cache)))))
 
-(defun osm--make-bookmark (&optional name lat lon)
-  "Make osm bookmark record with NAME at LAT/LON."
+(defun osm--bookmark-record-default ()
+  "Make osm bookmark record."
+  (osm--bookmark-record (osm--bookmark-name osm--lat osm--lon nil)
+                        osm--lat osm--lon nil))
+
+(defun osm--bookmark-record (name lat lon loc)
+  "Make osm bookmark record with NAME and LOC description at LAT/LON."
   (setq bookmark-current-bookmark nil) ;; Reset bookmark to use new name
-  `(,(or name (osm--bookmark-name))
-    (coordinates ,(or lat osm--lat) ,(or lon osm--lon) ,osm--zoom)
+  `(,name
+    (location . ,(osm--location-name lat lon loc 6))
+    (coordinates ,lat ,lon ,osm--zoom)
     (server . ,osm-server)
     (handler . ,#'osm-bookmark-jump)))
 
 (defun osm--org-link-data ()
   "Return Org link data."
-  (pcase-let ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Org Link")))
-    (setq name (string-remove-prefix "osm: " (osm--bookmark-name name)))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Org Link"))
+               (name (osm--location-name lat lon loc 2)))
     (list lat lon osm--zoom
           (and (not (eq osm-server (default-value 'osm-server))) osm-server)
           (if (eq osm-server (default-value 'osm-server))
@@ -1137,21 +1150,21 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--rename-buffer ()
   "Rename current buffer."
-  (setq list-buffers-directory
-        (format "%.6f° %.6f° Z%s %s"
-                osm--lat osm--lon osm--zoom
-                (osm--server-property :name)))
-  (rename-buffer (format "*osm: %.2f° %.2f° Z%s %s*"
-                         osm--lat osm--lon osm--zoom
-                         (osm--server-property :name))
-                 'unique))
+  (setq list-buffers-directory (osm--location-name osm--lat osm--lon nil 6))
+  (rename-buffer
+   (format "*osm: %s*" (osm--location-name osm--lat osm--lon nil 2))
+   'unique))
 
-(defun osm--bookmark-name (&optional loc)
-  "Return bookmark name with optional LOC name."
-  (format "osm: %s%.2f° %.2f° Z%s %s"
+(defun osm--location-name (lat lon loc prec)
+  "Format location string LAT/LON with optional LOC description.
+The coordinates are formatted with precision PREC."
+  (format (format "%%s%%.%df° %%.%df° Z%%s %%s" prec prec)
           (if loc (concat loc ", ") "")
-          osm--lat osm--lon osm--zoom
-          (osm--server-property :name)))
+          lat lon osm--zoom (osm--server-property :name)))
+
+(defun osm--bookmark-name (lat lon loc)
+  "Return bookmark name for LAT/LON/LOC."
+  (concat "osm: " (osm--location-name lat lon loc 2)))
 
 (defun osm--goto (lat lon zoom server id name)
   "Go to LAT/LON/ZOOM, change SERVER.
@@ -1283,16 +1296,16 @@ Optionally place transient pin with ID and NAME."
   (interactive)
   (osm--barf-unless-osm)
   (unwind-protect
-      (pcase-let* ((`(,lat ,lon ,desc) (osm--location-data 'osm-selected-bookmark "New Bookmark"))
-                   (def (osm--bookmark-name desc))
+      (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-selected-bookmark "New Bookmark"))
+                   (def (osm--bookmark-name lat lon loc))
                    (name (read-from-minibuffer "Bookmark name: " def nil nil 'bookmark-history def))
                    (bookmark-make-record-function
-                    (lambda () (osm--make-bookmark name lat lon))))
+                    (lambda () (osm--bookmark-record name lat lon loc))))
         (bookmark-set name)
         (message "Stored bookmark: %s" name))
     (osm--revert)))
 
-(defun osm--location-data (id name)
+(defun osm--fetch-location-data (id name)
   "Fetch location info for ID with NAME."
   (let ((lat (or (car osm--transient-pin) osm--lat))
         (lon (or (cadr osm--transient-pin) osm--lon)))
@@ -1305,11 +1318,11 @@ Optionally place transient pin with ID and NAME."
           (ignore-errors
             (alist-get
              'display_name
-             (osm--get-json
+             (osm--fetch-json
               (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
-(defun osm--get-json (url)
+(defun osm--fetch-json (url)
   "Get json from URL."
   (json-parse-string
    (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
@@ -1340,7 +1353,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                          ,lat ,lon
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or
-                    (osm--get-json
+                    (osm--fetch-json
                      (concat "https://nominatim.openstreetmap.org/search?format=json&q="
                              (url-encode-url search)))
                     (error "No results"))))
@@ -1476,13 +1489,13 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
   "Store coordinates as an Elisp link in the kill ring."
   (interactive)
   (osm--barf-unless-osm)
-  (pcase-let* ((`(,lat ,lon ,name) (osm--location-data 'osm-link "New Elisp Link"))
+  (pcase-let* ((`(,lat ,lon ,loc) (osm--fetch-location-data 'osm-link "New Elisp Link"))
                (link (format "(osm %.6f %.6f %s%s%s)"
                              lat lon osm--zoom
                              (if (eq osm-server (default-value 'osm-server))
                                  ""
                                (format " %s" osm-server))
-                             (if name (format " %S" name) ""))))
+                             (if loc (format " %S" loc) ""))))
     (kill-new link)
     (message "Stored in the kill ring: %s" link)))
 
