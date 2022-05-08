@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 0.6
+;; Version: 0.7
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/osm
 
@@ -51,6 +51,13 @@
 (defcustom osm-curl-options
   "--disable --fail --location --silent --max-time 30"
   "Curl command line options."
+  :type 'string)
+
+(defcustom osm-search-language "en"
+  "Language used for search results.
+Use RFC 1766 abbreviations, e.g.: `en' for English, `de' for German.
+A comma-separated specifies descending order of preference. See also
+`url-mime-language-string'."
   :type 'string)
 
 (defcustom osm-server-defaults
@@ -738,14 +745,16 @@ Should be at least 7 days according to the server usage policies."
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
+  (unless (display-graphic-p)
+    (warn "osm: Graphical display is required"))
   (dolist (type '(svg jpeg png))
     (unless (image-type-available-p type)
       (warn "osm: Support for %s images is missing" type)))
   (unless (libxml-available-p)
     (warn "osm: libxml is not available"))
   ;; json-available-p is not available on Emacs 27
-  ;; (unless (json-available-p)
-  ;;   (warn "osm: libjansson is not available"))
+  (unless (ignore-errors (equal [] (json-parse-string "[]")))
+    (warn "osm: libjansson is not available"))
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
@@ -1371,8 +1380,8 @@ Optionally place transient pin with ID and NAME."
             (alist-get
              'display_name
              (osm--fetch-json
-              (format "https://nominatim.openstreetmap.org/reverse?format=json&zoom=%s&lat=%s&lon=%s"
-                      (min 18 (max 3 osm--zoom)) lat lon)))))))
+              (format "https://nominatim.openstreetmap.org/reverse?format=json&accept-language=%s&zoom=%s&lat=%s&lon=%s"
+                      osm-search-language (min 18 (max 3 osm--zoom)) lat lon)))))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1406,8 +1415,8 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
                          ,@(mapcar #'string-to-number (alist-get 'boundingbox x)))))
                    (or
                     (osm--fetch-json
-                     (concat "https://nominatim.openstreetmap.org/search?format=json&q="
-                             (url-encode-url search)))
+                     (format "https://nominatim.openstreetmap.org/search?format=json&accept-language=%s&q=%s"
+                             osm-search-language (url-encode-url search)))
                     (error "No results"))))
          (selected (or
                     (and (or lucky (not (cdr results))) (car results))
