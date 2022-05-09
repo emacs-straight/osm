@@ -35,6 +35,10 @@
 ;; files to locations. Furthermore the package provides commands to
 ;; search for locations by name and to open and display GPX tracks.
 
+;; osm.el requires Emacs 27 and depends on the external `curl' program.
+;; Emacs must be built with libxml, libjansson, librsvg, libjpeg and
+;; libpng support.
+
 ;;; Code:
 
 (require 'bookmark)
@@ -742,19 +746,27 @@ Should be at least 7 days according to the server usage policies."
                   (* 60 60 24 osm-max-age))
            (delete-file file)))))))
 
+(defun osm--check-libraries ()
+  "Check that Emacs is compiled with the necessary libraries."
+  (let (req)
+    (unless (display-graphic-p)
+      (push "graphical display" req))
+    (dolist (type '(svg jpeg png))
+      (unless (image-type-available-p type)
+        (push (format "%s support" type) req)))
+    (unless (libxml-available-p)
+      (push "libxml" req))
+    ;; json-available-p is not available on Emacs 27
+    (unless (ignore-errors (equal [] (json-parse-string "[]")))
+      (push "libjansson" req))
+    (when req
+      (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+             (string-join req ", ")))))
+
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
-  (unless (display-graphic-p)
-    (warn "osm: Graphical display is required"))
-  (dolist (type '(svg jpeg png))
-    (unless (image-type-available-p type)
-      (warn "osm: Support for %s images is missing" type)))
-  (unless (libxml-available-p)
-    (warn "osm: libxml is not available"))
-  ;; json-available-p is not available on Emacs 27
-  (unless (ignore-errors (equal [] (json-parse-string "[]")))
-    (warn "osm: libjansson is not available"))
+  (osm--check-libraries)
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
