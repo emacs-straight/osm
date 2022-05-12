@@ -47,22 +47,6 @@
   (require 'cl-lib)
   (require 'subr-x))
 
-;; Check that Emacs is compiled with the necessary libraries.
-(let (req)
-  (unless (display-graphic-p)
-    (push "graphical display" req))
-  (dolist (type '(svg jpeg png))
-    (unless (image-type-available-p type)
-      (push (format "%s support" type) req)))
-  (unless (libxml-available-p)
-    (push "libxml" req))
-  ;; json-available-p is not available on Emacs 27
-  (unless (ignore-errors (equal [] (json-parse-string "[]")))
-    (push "libjansson" req))
-  (when req
-    (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
-           (string-join req ", "))))
-
 (defgroup osm nil
   "OpenStreetMap viewer."
   :group 'web
@@ -419,6 +403,15 @@ Should be at least 7 days according to the server usage policies."
          menu)))
     (nreverse menu)))
 
+(defsubst osm--lon-to-normalized-x (lon)
+  "Convert LON to normalized x coordinate."
+  (/ (+ lon 180.0) 360.0))
+
+(defsubst osm--lat-to-normalized-y (lat)
+  "Convert LAT to normalized y coordinate."
+  (setq lat (* lat (/ float-pi 180.0)))
+  (- 0.5 (/ (log (+ (tan lat) (/ 1.0 (cos lat)))) float-pi 2)))
+
 (defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
   "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
   (let ((w (/ (frame-pixel-width) 256))
@@ -429,15 +422,6 @@ Should be at least 7 days according to the server usage policies."
           (min (logb (/ w (abs (- (osm--lon-to-normalized-x lon1) (osm--lon-to-normalized-x lon2)))))
                (logb (/ h (abs (- (osm--lat-to-normalized-y lat1) (osm--lat-to-normalized-y lat2))))))))))
 
-(defun osm--lon-to-normalized-x (lon)
-  "Convert LON to normalized x coordinate."
-  (/ (+ lon 180.0) 360.0))
-
-(defun osm--lat-to-normalized-y (lat)
-  "Convert LAT to normalized y coordinate."
-  (setq lat (* lat (/ float-pi 180.0)))
-  (- 0.5 (/ (log (+ (tan lat) (/ 1 (cos lat)))) float-pi 2)))
-
 (defun osm--x-to-lon (x zoom)
   "Return longitude in degrees for X/ZOOM."
   (- (/ (* x 360.0) 256.0 (expt 2.0 zoom)) 180.0))
@@ -447,11 +431,11 @@ Should be at least 7 days according to the server usage policies."
   (setq y (* float-pi (- 1 (* 2 (/ y 256.0 (expt 2.0 zoom))))))
   (/ (* 180 (atan (/ (- (exp y) (exp (- y))) 2))) float-pi))
 
-(defun osm--lon-to-x (lon zoom)
+(defsubst osm--lon-to-x (lon zoom)
   "Convert LON/ZOOM to x coordinate in pixel."
   (floor (* 256 (expt 2.0 zoom) (osm--lon-to-normalized-x lon))))
 
-(defun osm--lat-to-y (lat zoom)
+(defsubst osm--lat-to-y (lat zoom)
   "Convert LAT/ZOOM to y coordinate in pixel."
   (floor (* 256 (expt 2.0 zoom) (osm--lat-to-normalized-y lat))))
 
@@ -762,9 +746,27 @@ Should be at least 7 days according to the server usage policies."
                   (* 60 60 24 osm-max-age))
            (delete-file file)))))))
 
+(defun osm--check-libraries ()
+  "Check that Emacs is compiled with the necessary libraries."
+  (let (req)
+    (unless (display-graphic-p)
+      (push "graphical display" req))
+    (dolist (type '(svg jpeg png))
+      (unless (image-type-available-p type)
+        (push (format "%s support" type) req)))
+    (unless (libxml-available-p)
+      (push "libxml" req))
+    ;; json-available-p is not available on Emacs 27
+    (unless (ignore-errors (equal [] (json-parse-string "[]")))
+      (push "libjansson" req))
+    (when req
+      (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+             (string-join req ", ")))))
+
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
   :interactive nil
+  (osm--check-libraries)
   (setq-local osm-server osm-server
               line-spacing nil
               cursor-type nil
@@ -808,11 +810,10 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--pin-inside-p (x y lat lon)
   "Return non-nil if pin at LAT/LON is inside tile X/Y."
-  (let ((p (osm--lon-to-x lon osm--zoom))
-        (q (osm--lat-to-y lat osm--zoom)))
-    (setq x (* x 256) y (* y 256))
-    (and (>= p (- x 32)) (< p (+ x 256 32))
-         (>= q y) (< q (+ y 256 64)))))
+  (let ((p (/ (osm--lon-to-x lon osm--zoom) 256.0))
+        (q (/ (osm--lat-to-y lat osm--zoom) 256.0)))
+    (and (>= p (- x 0.125)) (< p (+ x 1.125))
+         (>= q y) (< q (+ y 1.25)))))
 
 (defun osm--put-pin (pins id lat lon name)
   "Put pin at X/Y with NAME and ID in PINS hash table."
@@ -1062,9 +1063,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (cl-incf idx))
     (setq-local
      header-line-format
-     (concat
-      (format #(" %7.2f°" 0 6 (face bold)) osm--lat)
-      (format #(" %7.2f°" 0 6 (face bold)) osm--lon)
+     (list
+      (format (propertize " %7.2f° %7.2f°" 'face 'bold) osm--lat osm--lon)
       (propertize " " 'display '(space :align-to (- center 10)))
       (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
       (if (>= meter 1000) "km " "m ")
@@ -1395,6 +1395,7 @@ Optionally place transient pin with ID and NAME."
 
 (defun osm--fetch-json (url)
   "Get json from URL."
+  (osm--check-libraries)
   (json-parse-string
    (let ((default-process-coding-system '(utf-8-unix . utf-8-unix)))
      (shell-command-to-string
@@ -1453,6 +1454,7 @@ If the prefix argument LUCKY is non-nil take the first result and jump there."
 (defun osm-gpx-show (file)
   "Show the tracks of gpx FILE in an `osm-mode' buffer."
   (interactive "fGPX file: ")
+  (osm--check-libraries)
   (let ((dom (with-temp-buffer
                (insert-file-contents file)
                (libxml-parse-xml-region (point-min) (point-max))))
