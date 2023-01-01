@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 0.8
+;; Version: 0.9
 ;; Package-Requires: ((emacs "27.1"))
 ;; Homepage: https://github.com/minad/osm
 
@@ -1064,8 +1064,17 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq-local
      header-line-format
      (list
+      (osm--header-button " ☰ " osm--menu)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button (format " %s " server) #'osm--server-menu)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button " + " #'osm-zoom-in)
+      (propertize " " 'display '(space :width (1)))
+      (osm--header-button " - " #'osm-zoom-out)
+      (format " Z%-2d " osm--zoom)
+      (propertize " " 'display '(space :align-to (- center 15)))
       (format (propertize " %7.2f° %7.2f°" 'face 'bold) osm--lat osm--lon)
-      (propertize " " 'display '(space :align-to (- center 10)))
+      (propertize " " 'display '(space :align-to (- right 20)))
       (format "%3s " (if (>= meter 1000) (/ meter 1000) meter))
       (if (>= meter 1000) "km " "m ")
       (propertize " " 'face '(:inverse-video t)
@@ -1073,17 +1082,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
       (propertize " " 'face '(:strike-through t)
                   'display `(space :width (,(floor (/ meter meter-per-pixel)))))
       (propertize " " 'face '(:inverse-video t)
-                  'display '(space :width (3)))
-      (propertize " " 'display `(space :align-to
-                                       (- right ,(+ 5 3 3 2 (length server) 3) (,(+ 4 1 4 1 4 1 4)))))
-      (format " Z%-2d " osm--zoom)
-      (osm--header-button " + " #'osm-zoom-in)
-      (propertize " " 'display '(space :width (1)))
-      (osm--header-button " - " #'osm-zoom-out)
-      (propertize " " 'display '(space :width (1)))
-      (osm--header-button (format " %s " server) #'osm--server-menu)
-      (propertize " " 'display '(space :width (1)))
-      (osm--header-button " ☰ " osm--menu)))))
+                  'display '(space :width (3)))))))
 
 (defun osm--update ()
   "Update map display."
