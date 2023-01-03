@@ -1,6 +1,6 @@
 ;;; osm.el --- OpenStreetMap viewer -*- lexical-binding: t -*-
 
-;; Copyright (C) 2022  Free Software Foundation, Inc.
+;; Copyright (C) 2022-2023 Free Software Foundation, Inc.
 
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
@@ -80,85 +80,85 @@ A comma-separated specifies descending order of preference. See also
      :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
+                 "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
      :name "Mapnik(de)"
      :description "Localized Mapnik map provided by OpenStreetMap Germany"
      :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
      :group "Standard"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
     (fr
      :name "Mapnik(fr)"
      :description "Localized Mapnik map by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
      :group "Standard"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
     (humanitarian
      :name "Humanitarian"
      :description "Humanitarian map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
      :group "Special Purpose"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/cyclosm/%z/%x/%y.png"
      :group "Transportation"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {CyclOSM|https://www.cyclosm.org/} contributors"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"))
     (openriverboatmap
      :name "OpenRiverBoatMap"
      :description "Waterways map provided by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
      :group "Transportation"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
     (opentopomap
      :name "OpenTopoMap"
      :description "Topographical map provided by OpenTopoMap"
      :url "https://%s.tile.opentopomap.org/%z/%x/%y.png"
      :group "Topographical"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
                  "Elevation data: {SRTM|https://www2.jpl.nasa.gov/srtm/}"))
     (opvn
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
      :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
      :group "Transportation"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {ÖPNVKarte|https://www.öpnvkarte.de}"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}"))
     (stamen-watercolor
      :name "Stamen Watercolor"
      :description "Artistic map in watercolor style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
      :group "Artistic"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-terrain
      :name "Stamen Terrain" :max-zoom 18
      :description "Map with hill shading provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png"
      :group "Artistic"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-dark
      :name "Stamen Toner Dark"
      :description "Artistic map in toner style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png"
      :group "Artistic"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
     (stamen-toner-light
      :name "Stamen Toner Lite"
      :description "Artistic map in toner style provided by Stamen"
      :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"
      :group "Artistic"
-     :copyright ("Map data: © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style: © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
+     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
+                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
   "List of tile servers."
   :type '(alist :key-type symbol :value-type plist))
 
@@ -225,8 +225,8 @@ Should be at least 7 days according to the server usage policies."
   "Size of tile memory cache."
   :type '(choice (const nil) integer))
 
-(defun osm--menu-item (menu)
-  "Generate menu item from MENU."
+(defun osm--menu-item (menu &optional name)
+  "Generate menu item from MENU and optional NAME."
   `(menu-item
     ""
     nil :filter
@@ -234,9 +234,11 @@ Should be at least 7 days according to the server usage policies."
        (select-window
         (posn-window
          (event-start last-input-event)))
-       (easy-menu-filter-return (if (functionp menu)
-                                    (funcall menu)
-                                  menu)))))
+       (easy-menu-filter-return
+        (if (functionp menu)
+            (funcall menu)
+          menu)
+        name))))
 
 (defvar osm--menu
   '(["Home" osm-home t]
@@ -259,7 +261,7 @@ Should be at least 7 days according to the server usage policies."
     ["Clone" clone-buffer t]
     ["Revert" revert-buffer t]
     ["Customize" (customize-group 'osm) t])
-  "Menu for `osm-mode.")
+  "Menu for `osm-mode'.")
 
 (defvar osm-mode-map
   (let ((map (make-sparse-keymap)))
@@ -1047,7 +1049,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                               (lambda ()
                                 (interactive "@")
                                 (call-interactively action))
-                            (osm--menu-item action)))
+                            action))
                         map)
               'face '(:box (:line-width -2 :style released-button))
               'mouse-face '(:box (:line-width -2 :style pressed-button))))
@@ -1064,9 +1066,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
     (setq-local
      header-line-format
      (list
-      (osm--header-button " ☰ " osm--menu)
+      (osm--header-button " ☰ " (osm--menu-item osm--menu "Menu"))
       (propertize " " 'display '(space :width (1)))
-      (osm--header-button (format " %s " server) #'osm--server-menu)
+      (osm--header-button (format " %s " server)
+                          (osm--menu-item #'osm--server-menu "Server"))
       (propertize " " 'display '(space :width (1)))
       (osm--header-button " + " #'osm-zoom-in)
       (propertize " " 'display '(space :width (1)))
@@ -1138,12 +1141,10 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                         (if (listp copyright)
                             (string-join copyright " | ")
                           copyright)
-                        (propertize " "
-                                    'display
-                                    '(space :align-to right)))))
+                        (propertize " " 'display '(space :align-to (+ 42 right))))))
       (add-face-text-property
        0 (length copyright)
-       '(:inherit (header-line variable-pitch) :height 0.75)
+       '(:inherit (header-line variable-pitch) :height 0.65)
        t copyright)
       (setq-local tab-line-format (list 'osm-copyright copyright)))))
 
