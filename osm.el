@@ -292,6 +292,9 @@ Should be at least 7 days according to the server usage policies."
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
+  "<drag-mouse-1>" #'ignore
+  "<drag-mouse-2>" #'ignore
+  "<drag-mouse-3>" #'ignore
   "<up>" #'osm-up
   "<down>" #'osm-down
   "<left>" #'osm-left
@@ -920,7 +923,7 @@ TPIN is an optional transient pin."
                                  (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
-                              ,id (help-echo ,(truncate-string-to-width name 40 0 nil t) pointer hand))
+                              ,id (help-echo ,(truncate-string-to-width name 40 0 nil t)))
                             areas)
                       ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       (format "
