@@ -6,7 +6,7 @@
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
 ;; Version: 0.13
-;; Package-Requires: ((emacs "27.1") (compat "29.1.4.0"))
+;; Package-Requires: ((emacs "27.1") (compat "29.1.4.2"))
 ;; Homepage: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
 
@@ -80,22 +80,22 @@ A comma-separated specifies descending order of preference.  See also
 
 (defcustom osm-server-list
   '((default
-     :name "Mapnik"
-     :description "Standard Mapnik map provided by OpenStreetMap"
+     :name "Carto"
+     :description "Standard Carto map provided by OpenStreetMap"
      :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
-     :name "Mapnik(de)"
-     :description "Localized Mapnik map provided by OpenStreetMap Germany"
+     :name "Carto(de)"
+     :description "Localized Carto map provided by OpenStreetMap Germany"
      :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
     (fr
-     :name "Mapnik(fr)"
-     :description "Localized Mapnik map by OpenStreetMap France"
+     :name "Carto(fr)"
+     :description "Localized Carto map by OpenStreetMap France"
      :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
@@ -135,40 +135,13 @@ A comma-separated specifies descending order of preference.  See also
      :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}"))
-    (stamen-watercolor
-     :name "Stamen Watercolor"
-     :description "Artistic map in watercolor style provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/watercolor/%z/%x/%y.jpg"
-     :group "Artistic"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
-    (stamen-terrain
-     :name "Stamen Terrain" :max-zoom 18
-     :description "Map with hill shading provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/terrain/%z/%x/%y.png"
-     :group "Artistic"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
-    (stamen-toner-dark
-     :name "Stamen Toner Dark"
-     :description "Artistic map in toner style provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner/%z/%x/%y.png"
-     :group "Artistic"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})"))
-    (stamen-toner-light
-     :name "Stamen Toner Lite"
-     :description "Artistic map in toner style provided by Stamen"
-     :url "https://stamen-tiles-%s.a.ssl.fastly.net/toner-lite/%z/%x/%y.png"
-     :group "Artistic"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Stamen Design|http://maps.stamen.com/} ({CC-BY|https://creativecommons.org/licenses/by/3.0/})")))
+                 "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
   "List of tile servers.
 The :url of each server should specify %x, %y and %z placeholders
 for the map coordinates.  It can optionally use an %s placeholder
-for the subdomain and a %k placeholder for an api-key, which will
-be retrieved via `auth-source-search'."
+for the subdomain and a %k placeholder for an apikey.  The apikey
+will be retrieved via `auth-source-search' with the :host set to
+the domain name and the :user to the string \"apikey\"."
   :type '(alist :key-type symbol :value-type plist))
 
 (defcustom osm-copyright t
@@ -882,10 +855,10 @@ Should be at least 7 days according to the server usage policies."
         (osm--put-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
     pins))
 
-;; TODO The Bresenham algorithm used here to add the line segments
-;; to the tiles has the issue that lines which go along a tile
-;; border may be drawn only partially. We can fix this by starting
-;; Bresenham at (x0±line width, y0±line width).
+;; TODO The Bresenham algorithm used here to add the line segments to the tiles
+;; has the issue that lines which go along a tile border may be drawn only
+;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
+;; width).
 (defun osm--compute-tracks ()
   "Compute track hash table."
   (let ((tracks (make-hash-table :test #'equal)))
@@ -933,9 +906,10 @@ Should be at least 7 days according to the server usage policies."
 (defun osm--get-overlays (x y)
   "Compute overlays and return the overlays in tile X/Y."
   (unless (eq (car osm--overlay-table) osm--zoom)
-    ;; TODO: Do not compute overlays for the entire map, only for a reasonable viewport around the
-    ;; current center, maybe 10x the window size. Otherwise the spatial hash map for the tracks can
-    ;; get very large if a line segment spans many tiles.
+    ;; TODO: Do not compute overlays for the entire map, only for a reasonable
+    ;; viewport around the current center, maybe 10x the window size. Otherwise
+    ;; the spatial hash map for the tracks can get very large if a line segment
+    ;; spans many tiles.
     (setq osm--overlay-table (list osm--zoom (osm--compute-pins) (osm--compute-tracks))))
   (let ((pins (gethash (cons x y) (cadr osm--overlay-table)))
         (tracks (gethash (cons x y) (caddr osm--overlay-table))))
@@ -975,8 +949,9 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
                           (if (eval-when-compile (> emacs-major-version 27))
                               (file-name-nondirectory file)
-                            ;; NOTE: On Emacs 27, :base-uri and embedding by file
-                            ;; path is not supported. Use the less efficient base64 encoding.
+                            ;; NOTE: On Emacs 27, :base-uri and embedding by
+                            ;; file path is not supported. Use the less
+                            ;; efficient base64 encoding.
                             (svg--image-data
                              file
                              (if (member (file-name-extension file) '("jpg" "jpeg"))
