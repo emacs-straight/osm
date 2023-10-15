@@ -2,11 +2,12 @@
 #+author: Daniel Mendler
 #+language: en
 
-* Development
+* Version 0.14 (2023-10-14)
 
 - Compatibility with =pixel-scroll-precision-mode=.
 - Update list of servers.
 - Add =osm-add-server= utility function with error checking.
+- =osm-search=: Improve UI if default completions buffer is used.
 
 * Version 0.13 (2023-07-02)
 
