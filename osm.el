@@ -503,10 +503,10 @@ Should be at least 7 days according to the server usage policies."
 
 (defun osm--tile-file (x y zoom)
   "Return tile file name for coordinate X, Y and ZOOM."
-  (expand-file-name
-   (format "%s%s/%d-%d-%d.%s"
-           osm-tile-directory
-           (symbol-name osm-server)
+  (file-name-concat
+   (expand-file-name osm-tile-directory)
+   (symbol-name osm-server)
+   (format "%d-%d-%d.%s"
            zoom x y
            (file-name-extension
             (url-file-nondirectory
@@ -569,7 +569,8 @@ Should be at least 7 days according to the server usage policies."
                 (* (length (osm--server-property :subdomains))
                    (osm--server-property :max-connections)))
              osm--download-queue)
-    (pcase-let ((dir (concat osm-tile-directory (symbol-name osm-server)))
+    (pcase-let ((dir (file-name-concat (expand-file-name osm-tile-directory)
+                                       (symbol-name osm-server)))
                 (`(,command . ,jobs) (osm--download-command))
                 (buffer (current-buffer))
                 (output ""))
@@ -762,17 +763,16 @@ Should be at least 7 days according to the server usage policies."
     (run-with-idle-timer
      30 nil
      (lambda ()
-       (dolist (file
-                (ignore-errors
-                  (directory-files-recursively
-                   osm-tile-directory
-                   "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" nil)))
-         (when (> (float-time
-                   (time-since
-                    (file-attribute-modification-time
-                     (file-attributes file))))
-                  (* 60 60 24 osm-max-age))
-           (delete-file file)))))))
+       (dolist (dir (directory-files osm-tile-directory t "\\`[^.]+\\'" t))
+         (dolist (file (directory-files
+                        dir t "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" t))
+           (when (> (float-time (time-since
+                                 (file-attribute-modification-time
+                                  (file-attributes file))))
+                    (* 60 60 24 osm-max-age))
+             (delete-file file)))
+         (when (directory-empty-p dir)
+           (ignore-errors (delete-directory dir))))))))
 
 (defun osm--check-libraries ()
   "Check that Emacs is compiled with the necessary libraries."
