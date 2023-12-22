@@ -172,18 +172,21 @@ the domain name and the :user to the string \"apikey\"."
   :type 'boolean)
 
 (defcustom osm-pin-colors
-  '((osm-selected-bookmark "#e20" "#600")
-    (osm-selected-poi "#e20" "#600")
-    (osm-bookmark "#f80" "#820")
-    (osm-transient "#08f" "#028")
-    (osm-link "#f6f" "#808")
-    (osm-poi "#88f" "#228")
-    (osm-home "#80f" "#208"))
+  '((osm-selected-bookmark . "#e20")
+    (osm-selected-home . "#e20")
+    (osm-selected-poi . "#e20")
+    (osm-selected-track . "#e20")
+    (osm-bookmark . "#f80")
+    (osm-transient . "#08f")
+    (osm-link "#f6f")
+    (osm-poi . "#88f")
+    (osm-home . "#80f")
+    (osm-track . "#00a"))
   "Colors of pins."
-  :type '(alist :key-type symbol :value-type (list string string)))
+  :type '(alist :key-type symbol :value-type string))
 
 (defcustom osm-track-style
-  "stroke:#00A;stroke-width:10;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
+  "stroke:#00a;stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
   "SVG style used to draw tracks."
   :type 'string)
 
@@ -260,25 +263,33 @@ Should be at least 7 days according to the server usage policies."
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
-  "<osm-home>" #'ignore
   "<osm-link>" #'ignore
   "<osm-transient>" #'ignore
   "<osm-selected-bookmark>" #'ignore
   "<osm-selected-poi>" #'ignore
-  "<osm-bookmark> <mouse-1>" #'osm-bookmark-select-click
-  "<osm-bookmark> <mouse-2>" #'osm-bookmark-select-click
-  "<osm-bookmark> <mouse-3>" #'osm-bookmark-select-click
-  "<osm-poi> <mouse-1>" #'osm-poi-click
-  "<osm-poi> <mouse-2>" #'osm-poi-click
-  "<osm-poi> <mouse-3>" #'osm-poi-click
+  "<osm-selected-home>" #'ignore
+  "<osm-bookmark> <mouse-1>" #'osm-bookmark-click
+  "<osm-bookmark> <mouse-2>" #'osm-bookmark-click
+  "<osm-bookmark> <mouse-3>" #'osm-bookmark-click
+  "<osm-home> <mouse-1>" #'osm-pin-click
+  "<osm-home> <mouse-2>" #'osm-pin-click
+  "<osm-home> <mouse-3>" #'osm-pin-click
+  "<osm-poi> <mouse-1>" #'osm-pin-click
+  "<osm-poi> <mouse-2>" #'osm-pin-click
+  "<osm-poi> <mouse-3>" #'osm-pin-click
+  "<osm-track> <mouse-1>" #'osm-track-click
+  "<osm-track> <mouse-2>" #'osm-track-click
+  "<osm-track> <mouse-3>" #'osm-track-click
   "<home>" #'osm-home
   "+" #'osm-zoom-in
   "-" #'osm-zoom-out
   "SPC" #'osm-zoom-in
   "S-SPC" #'osm-zoom-out
-  "<mouse-1>" #'osm-transient-click
+  "<mouse-1>" #'osm-click
   "<mouse-2>" #'osm-org-link-click
-  "<mouse-3>" #'osm-bookmark-set-click
+  "<mouse-3>" #'osm-bookmark-click
+  "S-<down-mouse-1>" #'ignore
+  "S-<mouse-1>" #'osm-track-click
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
@@ -298,8 +309,9 @@ Should be at least 7 days according to the server usage policies."
   "M-<left>" #'osm-left-left
   "M-<right>" #'osm-right-right
   "n" #'osm-bookmark-rename
-  "d" #'osm-bookmark-delete
-  "DEL" #'osm-bookmark-delete
+  "d" #'osm-pin-delete
+  "DEL" #'osm-pin-delete
+  "<deletechar>" #'osm-pin-delete
   "c" #'osm-center
   "o" #'clone-buffer
   "u" #'osm-save-url
@@ -358,7 +370,7 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--tile-cache nil
   "Global tile memory cache.")
 
-(defvar osm--tile-cookie 0
+(defvar osm--tile-age 0
   "Tile cache cookie.")
 
 (defvar osm--gpx-files nil
@@ -402,6 +414,11 @@ Should be at least 7 days according to the server usage policies."
 
 (defvar-local osm--transient-pin nil
   "Transient pin.")
+
+;; TODO: The track should better be buffer-local.
+;; The tile cache must be adapted to handle this.
+(defvar osm--track nil
+  "List of track coordinates.")
 
 (defun osm--server-menu ()
   "Generate server menu."
@@ -643,17 +660,64 @@ Should be at least 7 days according to the server usage policies."
     (message "%s" (cdddr osm--transient-pin))
     (osm--update)))
 
-(defun osm-transient-click (event)
+(defun osm-click (event)
   "Put a transient pin at location of the click EVENT."
   (interactive "@e")
   (osm--put-transient-pin-event event)
   (osm--update))
 
-(defun osm-bookmark-set-click (event)
-  "Create bookmark at position of click EVENT."
+(defun osm--haversine (lat1 lon1 lat2 lon2)
+  "Compute distance between LAT1/LON1 and LAT2/LON2 in km."
+  ;; https://en.wikipedia.org/wiki/Haversine_formula
+  (let* ((rad (/ float-pi 180))
+         (y (sin (* 0.5 rad (- lat2 lat1))))
+         (x (sin (* 0.5 rad (- lon2 lon1))))
+         (h (+ (* x x) (* (cos (* rad lat1)) (cos (* rad lat2)) y y))))
+    (* 2 6371 (atan (sqrt h) (sqrt (- 1 h))))))
+
+(defun osm-track-click (event)
+  "Put or select a track pin at location of the click EVENT."
   (interactive "@e")
-  (osm--put-transient-pin-event event 'osm-selected-bookmark "New Bookmark")
-  (osm-bookmark-set))
+  (if-let (pin (osm--pin-at event 'osm-track))
+      (progn
+        (osm--put-transient-pin 'osm-selected-track (car pin) (cadr pin) (cdddr pin))
+        (osm--update))
+    (when (and (not osm--track) osm--transient-pin)
+      (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track))
+    (osm--put-transient-pin-event event 'osm-selected-track
+                                  (format "(%s)" (1+ (length osm--track))))
+    (push (cons (car osm--transient-pin) (cadr osm--transient-pin)) osm--track)
+    (osm--revert))
+  (when (cdr osm--track)
+    (let ((len1 0)
+          (len2 0)
+          (p osm--track)
+          (sel (cons (car osm--transient-pin) (cadr osm--transient-pin))))
+      (while (and (cdr p) (not (equal (car p) sel)))
+        (cl-incf len2 (osm--haversine (caar p) (cdar p)
+                                      (caadr p) (cdadr p)))
+        (pop p))
+      (while (cdr p)
+        (cl-incf len1 (osm--haversine (caar p) (cdar p)
+                                      (caadr p) (cdadr p)))
+        (pop p))
+      (message "%s way points, length %.2fkm%s"
+               (length osm--track) (+ len1 len2)
+               (if (or (= len1 0) (= len2 0))
+                   ""
+                 (format ", (1) → %.2fkm → (%s) → %.2fkm → (%s)"
+                         len1 (length (member sel osm--track)) len2
+                         (length osm--track)))))))
+
+(defun osm-bookmark-click (event)
+  "Create or select bookmark at position of click EVENT."
+  (interactive "@e")
+  (if-let (pin (osm--pin-at event 'osm-bookmark))
+      (progn
+        (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
+        (osm--update))
+    (osm--put-transient-pin-event event 'osm-selected-bookmark "New Bookmark")
+    (osm-bookmark-set)))
 
 (defun osm-org-link-click (event)
   "Store link at position of click EVENT."
@@ -661,35 +725,30 @@ Should be at least 7 days according to the server usage policies."
   (osm--put-transient-pin-event event 'osm-link "New Org Link")
   (call-interactively 'org-store-link))
 
-(defun osm--pin-at (type x y)
-  "Get pin of TYPE at X/Y."
-  (let ((x (+ (osm--x0) x))
-        (y (+ (osm--y0) y))
-        (min most-positive-fixnum)
-        found)
+(defun osm--pin-at (event &optional type)
+  "Get pin of TYPE at EVENT."
+  (let* ((xy (posn-x-y (event-start event)))
+         (x (+ (osm--x0) (car xy)))
+         (y (+ (osm--y0) (cdr xy)))
+         (min most-positive-fixnum)
+         found)
     (dolist (pin (car (osm--get-overlays (/ x 256) (/ y 256))))
       (pcase-let ((`(,p ,q ,_lat ,_lon ,id . ,_) pin))
-        (when (eq type id)
+        (when (or (not type) (eq type id))
           (let ((d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
             (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
               (setq min d found pin))))))
     (cddr found)))
 
-(defun osm-bookmark-select-click (event)
-  "Select bookmark at position of click EVENT."
+(defun osm-pin-click (event)
+  "Select pin at position of click EVENT."
   (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
-    (when-let (pin (osm--pin-at 'osm-bookmark x y))
-      (osm--put-transient-pin 'osm-selected-bookmark (car pin) (cadr pin) (cdddr pin))
-      (osm--update))))
-
-(defun osm-poi-click (event)
-  "Select point of interest at position of click EVENT."
-  (interactive "@e")
-  (pcase-let* ((`(,x . ,y) (posn-x-y (event-start event))))
-    (when-let (pin (osm--pin-at 'osm-poi x y))
-      (osm--put-transient-pin 'osm-selected-poi (car pin) (cadr pin) (cdddr pin))
-      (osm--update))))
+  (when-let (pin (osm--pin-at event))
+    (osm--put-transient-pin
+     (intern (concat "osm-selected-"
+                     (substring (symbol-name (caddr pin)) 4)))
+     (car pin) (cadr pin) (cdddr pin))
+    (osm--update)))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -876,55 +935,63 @@ Should be at least 7 days according to the server usage policies."
     (dolist (file osm--gpx-files)
       (dolist (pt (cddr file))
         (osm--put-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
+    (cl-loop for pt in osm--track for idx from (length osm--track) downto 1 do
+             (osm--put-pin pins 'osm-track (car pt) (cdr pt)
+                           (format "(%s)" idx)))
     pins))
 
-;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
-;; has the issue that lines which go along a tile border may be drawn only
-;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
-;; width).
 (defun osm--compute-tracks ()
   "Compute track hash table."
   (let ((tracks (make-hash-table :test #'equal)))
     (dolist (file osm--gpx-files)
       (dolist (seg (cadr file))
-        (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
-                        (osm--lat-to-y (caar seg) osm--zoom))))
-          (dolist (pt (cdr seg))
-            (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
-                   (py1 (osm--lat-to-y (car pt) osm--zoom))
-                   (pdx (- px1 (car p0)))
-                   (pdy (- py1 (cdr p0))))
-              ;; Ignore point if too close to last point
-              (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
-                (let* ((p1 (cons px1 py1))
-                       (seg (cons p0 p1))
-                       (x0 (/ (car p0) 256))
-                       (y0 (/ (cdr p0) 256))
-                       (x1 (/ px1 256))
-                       (y1 (/ py1 256))
-                       (sx (if (< x0 x1) 1 -1))
-                       (sy (if (< y0 y1) 1 -1))
-                       (dx (* sx (- x1 x0)))
-                       (dy (* sy (- y0 y1)))
-                       (err (+ dx dy)))
-                  ;; Bresenham
-                  (while
-                      (let ((ey (> (* err 2) dy))
-                            (ex (< (* err 2) dx)))
-                        (push seg (gethash (cons x0 y0) tracks))
-                        (unless (and (= x0 x1) (= y0 y1))
-                          (when (and ey ex)
-                            (push seg (gethash (cons x0 (+ y0 sy)) tracks))
-                            (push seg (gethash (cons (+ x0 sx) y0) tracks)))
-                          (when ey
-                            (cl-incf err dy)
-                            (cl-incf x0 sx))
-                          (when ex
-                            (cl-incf err dx)
-                            (cl-incf y0 sy))
-                          t)))
-                  (setq p0 p1))))))))
+        (osm--track-segment tracks seg)))
+    (osm--track-segment tracks osm--track)
     tracks))
+
+;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
+;; has the issue that lines which go along a tile border may be drawn only
+;; partially. We can fix this by starting Bresenham at (x0±line width, y0±line
+;; width).
+(defun osm--track-segment (tracks seg)
+  (when seg
+    (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
+                    (osm--lat-to-y (caar seg) osm--zoom))))
+      (dolist (pt (cdr seg))
+        (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
+               (py1 (osm--lat-to-y (car pt) osm--zoom))
+               (pdx (- px1 (car p0)))
+               (pdy (- py1 (cdr p0))))
+          ;; Ignore point if too close to last point
+          (unless (< (+ (* pdx pdx) (* pdy pdy)) 50)
+            (let* ((p1 (cons px1 py1))
+                   (seg (cons p0 p1))
+                   (x0 (/ (car p0) 256))
+                   (y0 (/ (cdr p0) 256))
+                   (x1 (/ px1 256))
+                   (y1 (/ py1 256))
+                   (sx (if (< x0 x1) 1 -1))
+                   (sy (if (< y0 y1) 1 -1))
+                   (dx (* sx (- x1 x0)))
+                   (dy (* sy (- y0 y1)))
+                   (err (+ dx dy)))
+              ;; Bresenham
+              (while
+                  (let ((ey (> (* err 2) dy))
+                        (ex (< (* err 2) dx)))
+                    (push seg (gethash (cons x0 y0) tracks))
+                    (unless (and (= x0 x1) (= y0 y1))
+                      (when (and ey ex)
+                        (push seg (gethash (cons x0 (+ y0 sy)) tracks))
+                        (push seg (gethash (cons (+ x0 sx) y0) tracks)))
+                      (when ey
+                        (cl-incf err dy)
+                        (cl-incf x0 sx))
+                      (when ex
+                        (cl-incf err dx)
+                        (cl-incf y0 sy))
+                      t)))
+              (setq p0 p1))))))))
 
 (defun osm--get-overlays (x y)
   "Compute overlays and return the overlays in tile X/Y."
@@ -952,20 +1019,20 @@ TPIN is an optional transient pin."
                  (svg-pin
                   (lambda (pin)
                     (pcase-let* ((`(,p ,q ,_lat ,_lon ,id . ,name) pin)
-                                 (`(,_ ,bg ,fg) (assq id osm-pin-colors)))
+                                 (bg (cdr (assq id osm-pin-colors))))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
                               ,id (help-echo ,(truncate-string-to-width name 40 0 nil t)))
                             areas)
                       ;; https://commons.wikimedia.org/wiki/File:Simpleicons_Places_map-marker-1.svg
                       (format "
-<g fill='%s' stroke='%s' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
+<g fill='%s' stroke='#000' stroke-width='9' transform='translate(%s %s) scale(0.09) translate(-256 -512)'>
 <path d='M256 0C167.641 0 96 71.625 96 160c0 24.75 5.625 48.219 15.672
 69.125C112.234 230.313 256 512 256 512l142.594-279.375
 C409.719 210.844 416 186.156 416 160C416 71.625 344.375
 0 256 0z M256 256c-53.016 0-96-43-96-96s42.984-96 96-96
 c53 0 96 43 96 96S309 256 256 256z'/>
-</g>" bg fg p q))))
+</g>" bg p q))))
                  (svg-text
                   (concat "<svg width='256' height='256' version='1.1'
 xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
@@ -1020,13 +1087,13 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
      (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
             (tile (and osm--tile-cache (gethash key osm--tile-cache))))
        (if tile
-           (progn (setcar tile osm--tile-cookie) (cdr tile))
+           (progn (setcar tile osm--tile-age) (cdr tile))
          (setq tile (osm--draw-tile x y nil))
          (when tile
            (when osm-max-tiles
              (unless osm--tile-cache
                (setq osm--tile-cache (make-hash-table :test #'equal :size osm-max-tiles)))
-             (puthash key (cons osm--tile-cookie tile) osm--tile-cache))
+             (puthash key (cons osm--tile-age tile) osm--tile-cache))
            tile))))))
 
 (defun osm--display-tile (x y tile)
@@ -1210,7 +1277,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 
 (defun osm--purge-tile-cache ()
   "Purge old tiles from the tile cache."
-  (cl-incf osm--tile-cookie)
+  (cl-incf osm--tile-age)
   (when (and osm--tile-cache (> (hash-table-count osm--tile-cache) osm-max-tiles))
     (let (items)
       (maphash (lambda (k v) (push (cons (car v) k) items)) osm--tile-cache)
@@ -1374,9 +1441,10 @@ When called interactively, call the function `osm-home'."
 (defun osm-bookmark-delete (bm)
   "Delete osm bookmark BM."
   (interactive (list (osm--bookmark-read)))
-  (bookmark-delete bm)
-  (setq osm--transient-pin nil)
-  (osm--revert))
+  (when (y-or-n-p (format "Delete bookmark `%s'? " bm))
+    (bookmark-delete bm)
+    (setq osm--transient-pin nil)
+    (osm--revert)))
 
 ;;;###autoload
 (defun osm-bookmark-rename (old-name)
@@ -1439,6 +1507,24 @@ When called interactively, call the function `osm-home'."
               (format "%s/reverse?format=json&accept-language=%s&zoom=%s&lat=%s&lon=%s"
                       osm-search-server osm-search-language
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
+
+(defun osm-pin-delete ()
+  "Delete selected pin (bookmark or way point)."
+  (interactive)
+  (pcase (caddr osm--transient-pin)
+    ('osm-selected-bookmark (osm-bookmark-delete (cdddr osm--transient-pin)))
+    ('osm-selected-track
+     (cl-loop for idx from 0 for (lat . lon) in osm--track do
+              (when (and (equal lat (car osm--transient-pin))
+                         (equal lon (cadr osm--transient-pin)))
+                (setq osm--track (delq (nth idx osm--track) osm--track)
+                      idx (min idx (1- (length osm--track)))
+                      osm--transient-pin (when-let (pin (nth idx osm--track))
+                                           `(,(car pin) ,(cdr pin)
+                                             osm-selected-track
+                                             . ,(format "(%s)" (- (length osm--track) idx)))))
+                (osm--revert)
+                (cl-return))))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1689,8 +1775,8 @@ The properties are checked as keyword arguments.  See
                    #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
                    #'osm-save-url))
   (put sym 'command-modes '(osm-mode)))
-(dolist (sym (list #'osm-mouse-drag #'osm-transient-click #'osm-org-link-click
-                   #'osm-poi-click #'osm-bookmark-set-click #'osm-bookmark-select-click))
+(dolist (sym (list #'osm-mouse-drag #'osm-click #'osm-org-link-click
+                   #'osm-pin-click #'osm-bookmark-click #'osm-track-click))
   (put sym 'completion-predicate #'ignore))
 
 (provide 'osm)

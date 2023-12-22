@@ -31,6 +31,7 @@ for locations by name and to open and display GPX tracks.
 - Moving in large and small steps
 - Mouse support (dragging, clicking, menu)
 - Map scale indicator
+- Distance measurement
 - Go to coordinate
 - Search for location by name
 - Org link, Geo url and Elisp link support
@@ -82,7 +83,7 @@ afterwards.
   link has the form ~(osm 51.49 -0.14 11)~.
 
 Bookmarks and Org links can be created at point by clicking with the mouse. See
-the docstrings of the commands ~osm-bookmark-set-click~ and ~osm-org-link-click~.
+the docstrings of the commands ~osm-bookmark-click~ and ~osm-org-link-click~.
 
 **** Org link examples
 
@@ -114,6 +115,14 @@ Elisp s-expressions they can be easily manipulated programatically.
   (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 #+end_src
 
+* Distance measurement
+
+Osm provides a simple distance measurement utility. In order to measure a
+distance, place or select a pin by clicking with the left mouse button. Then
+create one or more additional way points by pressing shift and clicking the left
+mouse button. The length of the track will be shown in the echo area. You can
+select the way points of the track and delete them with ~d~ or ~DEL~.
+
 * Commands and Key Bindings
 
 Top-level commands in =osm-prefix-map=. These bindings are available globally if
@@ -135,12 +144,13 @@ Some additional key bindings are available in Osm buffers:
 - ~C-<arrow>~, ~M-<arrow>~: Large step scrolling
 - ~+~, ~SPC~: =osm-zoom-in= - Zoom in
 - ~-~, ~S-SPC~: =osm-zoom-out= - Zoom out
-- ~<mouse-1>~: =osm-transient-click= - Place transient pin at point
+- ~<mouse-1>~: =osm-click= - Place pin at point
 - ~<mouse-2>~: =osm-org-link-click= - Store point as Org link
-- ~<mouse-3>~: =osm-bookmark-set-click= - Store point as bookmark
+- ~<mouse-3>~: =osm-bookmark-click= - Store point as bookmark
+- ~S-<mouse-1>~: =osm-track-click= - Create track pin to measure distance
 - ~<osm-bookmark mouse-*>~: =osm-bookmark-delete-click= - Click on bookmark at point to delete
 - ~<down-mouse-*>~: =osm-mouse-drag= - Drag the map with the mouse
-- ~d~, ~DEL~: =osm-bookmark-delete= - Delete selected bookmark
+- ~d~, ~DEL~: =osm-delete= - Delete selected pin (bookmark or way point)
 - ~c~: =osm-center= - Center to currently marked pin
 - ~X~: =osm-gpx-hide= - Hide overlays from GPX file
 - ~l~: =org-store-link= - Store Org link
