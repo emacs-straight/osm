@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 1.0
+;; Version: 1.1
 ;; Package-Requires: ((emacs "27.1") (compat "29.1.4.2"))
 ;; Homepage: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
@@ -256,6 +256,7 @@ Should be at least 7 days according to the server usage policies."
   "v" #'osm-server
   "t" #'osm-goto
   "x" #'osm-gpx-show
+  "X" #'osm-gpx-hide
   "j" #'osm-bookmark-jump)
 
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
@@ -305,7 +306,7 @@ Should be at least 7 days according to the server usage policies."
   "M-<down>" #'osm-down-down
   "M-<left>" #'osm-left-left
   "M-<right>" #'osm-right-right
-  "n" #'osm-bookmark-rename
+  "n" #'osm-rename
   "d" #'osm-delete
   "DEL" #'osm-delete
   "<deletechar>" #'osm-delete
@@ -331,6 +332,7 @@ Should be at least 7 days according to the server usage policies."
     "--"
     ["Org Link" org-store-link]
     ["Geo Url" osm-save-url]
+    ["Elisp Link" (osm-save-url t)]
     ("Bookmark"
      ["Set" osm-bookmark-set]
      ["Jump" osm-bookmark-jump]
@@ -661,11 +663,11 @@ Local per buffer since the overlays depend on the zoom level.")
   "Center to location of selected pin."
   (interactive)
   (osm--barf-unless-osm)
-  (when osm--pin
-    (setq osm--lat (car osm--pin)
-          osm--lon (cadr osm--pin))
-    (message "%s" (cdddr osm--pin))
-    (osm--update)))
+  (pcase osm--pin
+    (`(,lat ,lon ,_id ,name)
+     (setq osm--lat lat osm--lon lon)
+     (message "%s" name)
+     (osm--update))))
 
 (defun osm--haversine (lat1 lon1 lat2 lon2)
   "Compute distance between LAT1/LON1 and LAT2/LON2 in km."
@@ -679,36 +681,38 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm-mouse-track (event)
   "Set track pin at location of the click EVENT."
   (interactive "@e")
-  (when (and (not osm--track) osm--pin)
-    (push (cons (car osm--pin) (cadr osm--pin)) osm--track))
+  (pcase osm--pin
+    ((and (guard (not osm--track)) `(,lat ,lon ,_id ,_name))
+     (push (list lat lon "WP1") osm--track)))
   (osm--set-pin-event event 'osm-track
-                      (format "(%s)" (1+ (length osm--track))) 'quiet)
-  (push (cons (car osm--pin) (cadr osm--pin)) osm--track)
+                      (format "WP%s" (1+ (length osm--track))) 'quiet)
+  (pcase-let ((`(,lat ,lon ,_id ,name) osm--pin))
+    (push (list lat lon name) osm--track))
   (osm--revert)
   (osm--track-length))
 
 (defun osm--track-length ()
   "Echo track length."
   (when (cdr osm--track)
-    (let ((len1 0)
-          (len2 0)
-          (p osm--track)
-          (sel (cons (car osm--pin) (cadr osm--pin))))
-      (while (and (cdr p) (not (equal (car p) sel)))
-        (cl-incf len2 (osm--haversine (caar p) (cdar p)
-                                      (caadr p) (cdadr p)))
+    (pcase-let* ((len1 0)
+                 (len2 0)
+                 (p osm--track)
+                 (`(,sel-lat ,sel-lon ,_ ,sel-name) osm--pin))
+      (while (and (cdr p) (not (and (equal (caar p) sel-lat)
+                                    (equal (cadar p) sel-lon))))
+        (cl-incf len2 (osm--haversine (caar p) (cadar p)
+                                      (caadr p) (cadadr p)))
         (pop p))
       (while (cdr p)
-        (cl-incf len1 (osm--haversine (caar p) (cdar p)
-                                      (caadr p) (cdadr p)))
+        (cl-incf len1 (osm--haversine (caar p) (cadar p)
+                                      (caadr p) (cadadr p)))
         (pop p))
-      (message "%s way points, length %.2fkm%s"
+      (message "%s way points, length %.2fkm, %s"
                (length osm--track) (+ len1 len2)
                (if (or (= len1 0) (= len2 0))
-                   ""
-                 (format ", (1) → %.2fkm → (%s) → %.2fkm → (%s)"
-                         len1 (length (member sel osm--track)) len2
-                         (length osm--track)))))))
+                   sel-name
+                 (format "%.2fkm → %s → %.2fkm"
+                         len1 sel-name len2))))))
 
 (defun osm--pin-at (event &optional type)
   "Get pin of TYPE at EVENT."
@@ -718,7 +722,7 @@ Local per buffer since the overlays depend on the zoom level.")
          (min most-positive-fixnum)
          found)
     (dolist (pin (car (osm--get-overlays (/ x 256) (/ y 256))))
-      (pcase-let ((`(,p ,q ,_lat ,_lon ,id . ,_) pin))
+      (pcase-let ((`(,p ,q ,_lat ,_lon ,id ,_name) pin))
         (when (or (not type) (eq type id))
           (let ((d (+ (* (- p x) (- p x)) (* (- q y) (- q y)))))
             (when (and (>= q y) (< q (+ y 50)) (>= p (- x 20)) (< p (+ x 20)) (< d min))
@@ -734,11 +738,11 @@ Local per buffer since the overlays depend on the zoom level.")
 (defun osm-mouse-select (event)
   "Select pin at position of click EVENT."
   (interactive "@e")
-  (when-let ((pin (osm--pin-at event)))
-    (let ((track (eq (caddr pin) 'osm-track)))
-      (osm--set-pin (caddr pin) (car pin) (cadr pin) (cdddr pin) track)
-      (when track (osm--track-length)))
-    (osm--update)))
+  (pcase (osm--pin-at event)
+    (`(,lat ,lon ,id ,name)
+     (osm--set-pin id lat lon name (eq id 'osm-track))
+     (when (eq id 'osm-track) (osm--track-length))
+     (osm--update))))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
@@ -902,7 +906,7 @@ Local per buffer since the overlays depend on the zoom level.")
          (y (osm--lat-to-y lat osm--zoom))
          (x0 (/ x 256))
          (y0 (/ y 256))
-         (pin `(,x ,y ,lat ,lon ,id . ,name)))
+         (pin (list x y lat lon id name)))
     (push pin (gethash (cons x0 y0) pins))
     (cl-loop
      for i from -1 to 1 do
@@ -925,9 +929,8 @@ Local per buffer since the overlays depend on the zoom level.")
     (dolist (file osm--gpx-files)
       (dolist (pt (cddr file))
         (osm--add-pin pins 'osm-poi (cadr pt) (cddr pt) (car pt))))
-    (cl-loop for pt in osm--track for idx from (length osm--track) downto 1 do
-             (osm--add-pin pins 'osm-track (car pt) (cdr pt)
-                           (format "(%s)" idx)))
+    (cl-loop for (lat lon name) in osm--track do
+             (osm--add-pin pins 'osm-track lat lon name))
     pins))
 
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
@@ -935,10 +938,11 @@ Local per buffer since the overlays depend on the zoom level.")
 ;; partially. Use a more precise algorithm instead.
 (defun osm--add-track (tracks seg)
   (when seg
-    (let ((p0 (cons (osm--lon-to-x (cdar seg) osm--zoom)
+    (let ((p0 (cons (osm--lon-to-x (or (car-safe (cdar seg)) (cdar seg)) osm--zoom)
                     (osm--lat-to-y (caar seg) osm--zoom))))
       (dolist (pt (cdr seg))
-        (let* ((px1 (osm--lon-to-x (cdr pt) osm--zoom))
+        (let* ((px1 (cdr pt))
+               (px1 (osm--lon-to-x (if (consp px1) (car px1) px1) osm--zoom))
                (py1 (osm--lat-to-y (car pt) osm--zoom))
                (pdx (- px1 (car p0)))
                (pdy (- py1 (cdr p0))))
@@ -1007,7 +1011,7 @@ TPIN is an optional pin."
                  (y0 (* 256 y))
                  (svg-pin
                   (lambda (pin)
-                    (pcase-let* ((`(,p ,q ,_lat ,_lon ,id . ,name) pin)
+                    (pcase-let* ((`(,p ,q ,_lat ,_lon ,id ,name) pin)
                                  (bg (cdr (assq id osm-pin-colors))))
                       (setq p (- p x0) q (- q y0))
                       (push `((poly . [,p ,q ,(- p 20) ,(- q 40) ,p ,(- q 50) ,(+ p 20) ,(- q 40) ])
@@ -1067,11 +1071,11 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
   (pcase osm--pin
-    ((and `(,lat ,lon ,_ . ,name)
+    ((and `(,lat ,lon ,_id ,name)
           (guard (osm--pin-inside-p x y lat lon)))
-     (osm--draw-tile x y `(,(osm--lon-to-x lon osm--zoom)
-                           ,(osm--lat-to-y lat osm--zoom)
-                           ,lat ,lon osm-selected . ,name)))
+     (osm--draw-tile x y (list (osm--lon-to-x lon osm--zoom)
+                               (osm--lat-to-y lat osm--zoom)
+                               lat lon 'osm-selected name)))
     (_
      (let* ((key `(,osm-server ,osm--zoom ,x . ,y))
             (tile (and osm--tile-cache (gethash key osm--tile-cache))))
@@ -1362,11 +1366,9 @@ Optionally place pin with ID and NAME."
 (defun osm--set-pin (id lat lon name &optional quiet)
   "Set pin at LAT/LON with ID and NAME.
 Print NAME if not QUIET."
-  (setq osm--pin
-        `(,lat ,lon ,(or id 'osm-selected)
-               . ,(or name (format "Location %.6f° %.6f°" lat lon))))
-  (unless quiet
-    (message "%s" (cdddr osm--pin))))
+  (setq name (or name (format "Location %.6f° %.6f°" lat lon)))
+  (setq osm--pin (list lat lon (or id 'osm-selected) name))
+  (unless quiet (message "%s" name)))
 
 (defun osm--set-pin-event (event &optional id name quiet)
   "Set selection pin with ID and NAME at location of EVENT.
@@ -1443,7 +1445,7 @@ When called interactively, call the function `osm-home'."
   (interactive (list (car (osm--bookmark-read))))
   (let ((new-name (read-from-minibuffer "New name: " old-name nil nil
                                         'bookmark-history old-name)))
-    (when osm--pin (setf (cdddr osm--pin) new-name))
+    (when osm--pin (setf (cadddr osm--pin) new-name))
     (bookmark-rename old-name new-name)
     (osm--revert)))
 
@@ -1451,15 +1453,15 @@ When called interactively, call the function `osm-home'."
   "Read bookmark name."
   (bookmark-maybe-load-default-file)
   (or (assoc
-       (if (eq (caddr osm--pin) 'osm-bookmark)
-           (cdddr osm--pin)
-         (completing-read
-          "Bookmark: "
-          (or (cl-loop for bm in bookmark-alist
-                       if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
-                       collect (car bm))
-              (error "No bookmarks found"))
-          nil t nil 'bookmark-history))
+       (pcase osm--pin
+         (`(,_lat ,_lon osm-bookmark ,name) name)
+         (_ (completing-read
+             "Bookmark: "
+             (or (cl-loop for bm in bookmark-alist
+                          if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump)
+                          collect (car bm))
+                 (error "No bookmarks found"))
+             nil t nil 'bookmark-history)))
        bookmark-alist)
       (error "No bookmark selected")))
 
@@ -1498,34 +1500,57 @@ When called interactively, call the function `osm-home'."
                       osm-search-server osm-search-language
                       (min 18 (max 3 osm--zoom)) lat lon)))))))
 
+(defun osm--track-index ()
+  "Return index of selected track way point."
+  (cl-loop for idx from 0 for (lat lon _) in osm--track
+           if (and (equal lat (car osm--pin)) (equal lon (cadr osm--pin)))
+           return idx))
+
 (defun osm--track-delete ()
-  "Delete track pin."
-  (cl-loop for idx from 0 for (lat . lon) in osm--track do
-           (when (and (equal lat (car osm--pin))
-                      (equal lon (cadr osm--pin)))
-             (cl-callf2 delq (nth idx osm--track) osm--track)
-             (setq osm--pin nil
-                   idx (min idx (1- (length osm--track))))
-             (when-let (pin (nth idx osm--track))
-               (osm--set-pin 'osm-track (car pin) (cdr pin)
-                             (format "(%s)" (- (length osm--track) idx))
-                             'quiet))
-             (osm--track-length)
-             (osm--revert)
-             (cl-return))))
+  "Delete track way point"
+  (when-let ((idx (osm--track-index)))
+    ;; Delete pin
+    (cl-callf2 delq (nth idx osm--track) osm--track)
+    (setq osm--pin nil
+          idx (min idx (1- (length osm--track))))
+    ;; Select next pin
+    (pcase (nth idx osm--track)
+      (`(,lat ,lon ,name)
+       (osm--set-pin 'osm-track lat lon name 'quiet)))
+    ;; Rename pins after deletion
+    (cl-loop for idx from (length osm--track) downto 1
+             for pt in osm--track
+             if (string-match-p "\\`WP[0-9]+\\'" (caddr pt)) do
+             (setf (caddr pt) (format "WP%s" idx)))
+    (osm--track-length)
+    (osm--revert)))
+
+(defun osm--track-rename ()
+  "Rename track way point."
+  (when-let ((pt (nth (osm--track-index) osm--track))
+             (old-name (caddr pt))
+             (new-name (read-from-minibuffer "New name: " old-name nil nil nil old-name)))
+    (setf (caddr pt) new-name
+          (cadddr osm--pin) new-name)
+    (osm--revert)))
 
 (defun osm-delete ()
   "Delete selected pin (bookmark or way point)."
   (interactive)
+  (osm--barf-unless-osm)
   (pcase (caddr osm--pin)
     ('nil nil)
-    ('osm-bookmark
-     (osm-bookmark-delete (cdddr osm--pin)))
-    ('osm-track
-     (osm--track-delete))
-    (_
-     (setq osm--pin nil)
-     (osm--update))))
+    ('osm-bookmark (osm-bookmark-delete (cadddr osm--pin)))
+    ('osm-track (osm--track-delete))
+    (_ (setq osm--pin nil) (osm--update))))
+
+(defun osm-rename ()
+  "Rename selected pin (bookmark or way point)."
+  (interactive)
+  (osm--barf-unless-osm)
+  (pcase (caddr osm--pin)
+    ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
+    ('osm-track (osm--track-rename))))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
@@ -1658,8 +1683,7 @@ See `osm-search-server' and `osm-search-language' for customization."
                                       (or osm--gpx-files
                                           (error "No GPX files shown"))
                                       nil t nil 'file-name-history)))
-  (osm--barf-unless-osm)
-  (setq osm--gpx-files (assoc-delete-all file osm--gpx-files))
+  (cl-callf2 assoc-delete-all file osm--gpx-files)
   (osm--revert))
 
 (defun osm--server-annotation (cand)
@@ -1773,8 +1797,8 @@ The properties are checked as keyword arguments.  See
 
 (dolist (sym (list #'osm-center #'osm-up #'osm-down #'osm-left #'osm-right
                    #'osm-up-up #'osm-down-down #'osm-left-left #'osm-right-right
-                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set #'osm-gpx-hide
-                   #'osm-save-url))
+                   #'osm-zoom-out #'osm-zoom-in #'osm-bookmark-set
+                   #'osm-save-url #'osm-rename #'osm-delete))
   (put sym 'command-modes '(osm-mode)))
 (dolist (sym (list #'osm-mouse-drag #'osm-mouse-pin #'osm-mouse-select #'osm-mouse-track))
   (put sym 'completion-predicate #'ignore))
