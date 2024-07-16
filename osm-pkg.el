@@ -1,0 +1,2 @@
+;; Generated package description from osm.el  -*- no-byte-compile: t -*-
+(define-package "osm" "1.3.0.20240708.215736" "OpenStreetMap viewer" '((emacs "27.1") (compat "30")) :commit "17dfc017cdb0cf21325a9e636fd23e912aea84b3" :authors '(("Daniel Mendler" . "mail@daniel-mendler.de")) :maintainer '("Daniel Mendler" . "mail@daniel-mendler.de") :keywords '("network" "multimedia" "hypermedia" "mouse") :url "https://github.com/minad/osm")
