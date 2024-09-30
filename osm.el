@@ -242,6 +242,16 @@ Should be at least 7 days according to the server usage policies."
            (funcall menu)
          menu))))
 
+(defun osm--mouse-ignore-wheel (_prompt)
+  "Ignore mouse wheel events during key translation."
+  (pcase (this-single-command-raw-keys)
+    ((and `[,e]
+          (let y (event-basic-type e))
+          (guard (symbolp y))
+          (guard (string-search "wheel-" (symbol-name y))))
+     [])
+    (k k)))
+
 (defvar-keymap osm-prefix-map
   :doc "Global prefix map of OSM entry points."
   "h" #'osm-home
@@ -258,19 +268,6 @@ Should be at least 7 days according to the server usage policies."
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
-  "<osm-selected>" #'osm-mouse-select
-  "<osm-bookmark> <mouse-1>" #'osm-mouse-select
-  "<osm-bookmark> <mouse-2>" #'osm-mouse-select
-  "<osm-bookmark> <mouse-3>" #'osm-mouse-select
-  "<osm-home> <mouse-1>" #'osm-mouse-select
-  "<osm-home> <mouse-2>" #'osm-mouse-select
-  "<osm-home> <mouse-3>" #'osm-mouse-select
-  "<osm-poi> <mouse-1>" #'osm-mouse-select
-  "<osm-poi> <mouse-2>" #'osm-mouse-select
-  "<osm-poi> <mouse-3>" #'osm-mouse-select
-  "<osm-track> <mouse-1>" #'osm-mouse-select
-  "<osm-track> <mouse-2>" #'osm-mouse-select
-  "<osm-track> <mouse-3>" #'osm-mouse-select
   "<home>" #'osm-home
   "+" #'osm-zoom-in
   "-" #'osm-zoom-out
@@ -317,6 +314,11 @@ Should be at least 7 days according to the server usage policies."
   "<remap> <scroll-up-command>" #'osm-up
   "<" nil
   ">" nil)
+
+(dolist (pin osm-pin-colors)
+  (setq pin (vector (car pin)))
+  (define-key key-translation-map pin #'osm--mouse-ignore-wheel)
+  (define-key osm-mode-map pin #'osm-mouse-select))
 
 (easy-menu-define osm-mode-menu osm-mode-map
   "Menu for `osm-mode'."
@@ -746,11 +748,12 @@ Local per buffer since the overlays depend on the zoom level.")
   "Select pin at position of click EVENT."
   (declare (completion ignore))
   (interactive "@e")
-  (pcase (osm--pin-at event)
-    (`(,lat ,lon ,id ,name)
-     (osm--set-pin id lat lon name (eq id 'osm-track))
-     (when (eq id 'osm-track) (osm--track-length))
-     (osm--update))))
+  (when (memq (event-basic-type event) '(mouse-1 mouse-2 mouse-3))
+    (pcase (osm--pin-at event)
+      (`(,lat ,lon ,id ,name)
+       (osm--set-pin id lat lon name (eq id 'osm-track))
+       (when (eq id 'osm-track) (osm--track-length))
+       (osm--update)))))
 
 (defun osm-zoom-in (&optional n)
   "Zoom N times into the map."
