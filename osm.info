@@ -1,4 +1,4 @@
-This is doc5BX3XM.info, produced by makeinfo version 6.8 from osm.texi.
+This is docOUicOL.info, produced by makeinfo version 6.8 from osm.texi.
 
 INFO-DIR-SECTION Emacs misc features
 START-INFO-DIR-ENTRY
@@ -6,7 +6,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: doc5BX3XM.info,  Node: Top,  Next: Features,  Up: (dir)
+File: docOUicOL.info,  Node: Top,  Next: Features,  Up: (dir)
 
 osm.el - OpenStreetMap viewer for Emacs
 ***************************************
@@ -31,7 +31,7 @@ locations by name and to open and display GPX tracks.
 * Contributions::
 
 
-File: doc5BX3XM.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: Top
+File: docOUicOL.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -50,7 +50,7 @@ File: doc5BX3XM.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: To
    • Multiple preconfigured tile servers
 
 
-File: doc5BX3XM.info,  Node: Configuration,  Next: Bookmarks Org links Geo urls and Elisp links,  Prev: Features,  Up: Top
+File: docOUicOL.info,  Node: Configuration,  Next: Bookmarks Org links Geo urls and Elisp links,  Prev: Features,  Up: Top
 
 2 Configuration
 ***************
@@ -61,7 +61,7 @@ the external ‘curl’ program.  Emacs must be built with ‘libxml’,
 ‘libjansson’, ‘librsvg’, ‘libjpeg’ and ‘libpng’ support.  The following
 is an example configuration which relies on ‘use-package’.  Please take
 a look at the wiki (https://github.com/minad/osm/wiki) for additional
-configuration.
+tile server configurations, e.g., Google Maps.
 
      (use-package osm
        :bind ("C-c m" . osm-prefix-map) ;; Alternatives: `osm-home' or `osm'
@@ -82,7 +82,7 @@ configuration.
      )
 
 
-File: doc5BX3XM.info,  Node: Bookmarks Org links Geo urls and Elisp links,  Next: Distance measurement,  Prev: Configuration,  Up: Top
+File: docOUicOL.info,  Node: Bookmarks Org links Geo urls and Elisp links,  Next: Distance measurement,  Prev: Configuration,  Up: Top
 
 3 Bookmarks, Org links, Geo urls and Elisp links
 ************************************************
@@ -136,7 +136,7 @@ mouse.  See the docstrings of the commands ‘osm-bookmark-set’ and
           (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 
 
-File: doc5BX3XM.info,  Node: Distance measurement,  Next: Commands and Key Bindings,  Prev: Bookmarks Org links Geo urls and Elisp links,  Up: Top
+File: docOUicOL.info,  Node: Distance measurement,  Next: Commands and Key Bindings,  Prev: Bookmarks Org links Geo urls and Elisp links,  Up: Top
 
 4 Distance measurement
 **********************
@@ -149,7 +149,7 @@ shown in the echo area.  You can select the way points of the track and
 delete them with ‘d’ or ‘DEL’.
 
 
-File: doc5BX3XM.info,  Node: Commands and Key Bindings,  Next: Related projects,  Prev: Distance measurement,  Up: Top
+File: docOUicOL.info,  Node: Commands and Key Bindings,  Next: Related projects,  Prev: Distance measurement,  Up: Top
 
 5 Commands and Key Bindings
 ***************************
@@ -191,7 +191,7 @@ sufficient to press the key ‘s’ only to initiate a search.
    • ‘o’: ‘clone-buffer’ - Clone buffer
 
 
-File: doc5BX3XM.info,  Node: Related projects,  Next: Contributions,  Prev: Commands and Key Bindings,  Up: Top
+File: docOUicOL.info,  Node: Related projects,  Next: Contributions,  Prev: Commands and Key Bindings,  Up: Top
 
 6 Related projects
 ******************
@@ -204,7 +204,7 @@ There have been other attempts at map viewers in Emacs before.
    • <https://github.com/emacsattic/org-osm-link>
 
 
-File: doc5BX3XM.info,  Node: Contributions,  Prev: Related projects,  Up: Top
+File: docOUicOL.info,  Node: Contributions,  Prev: Related projects,  Up: Top
 
 7 Contributions
 ***************
@@ -219,13 +219,13 @@ Tag Table:
 Node: Top207
 Node: Features1123
 Node: Configuration1706
-Node: Bookmarks Org links Geo urls and Elisp links2956
-Ref: Org link examples4186
-Ref: Elisp link examples5196
-Node: Distance measurement5963
-Node: Commands and Key Bindings6553
-Node: Related projects8695
-Node: Contributions9109
+Node: Bookmarks Org links Geo urls and Elisp links2988
+Ref: Org link examples4218
+Ref: Elisp link examples5228
+Node: Distance measurement5995
+Node: Commands and Key Bindings6585
+Node: Related projects8727
+Node: Contributions9141
 
 End Tag Table
 
