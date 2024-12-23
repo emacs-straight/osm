@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 1.4
+;; Version: 1.5
 ;; Package-Requires: ((emacs "28.1") (compat "30"))
 ;; URL: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
@@ -1646,12 +1646,12 @@ See `osm-search-server' and `osm-search-language' for customization."
            (assoc
             (minibuffer-with-setup-hook
                 (lambda ()
+                  ;; TODO Use `eager-display' on Emacs 31
                   (when (and (eq completing-read-function #'completing-read-default)
                              (not (bound-and-true-p vertico-mode))
                              (not (bound-and-true-p icomplete-mode)))
                     (let ((message-log-max nil)
                           (inhibit-message t))
-                      ;; Show matches immediately for default completion.
                       (minibuffer-completion-help))))
               (completing-read
                (format "Matches for '%s': " needle)
