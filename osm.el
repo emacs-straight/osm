@@ -177,9 +177,10 @@ the domain name and the :user to the string \"apikey\"."
 (defcustom osm-pin-colors
   '((osm-selected . "#e20")
     (osm-bookmark . "#f80")
-    (osm-poi . "#88f")
     (osm-home . "#80f")
-    (osm-track . "#00a"))
+    (osm-track . "#00e")
+    (osm-gpx-poi . "#88f")
+    (osm-gpx-track . "#88f"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
@@ -889,7 +890,8 @@ Local per buffer since the overlays depend on the zoom level.")
               mwheel-scroll-down-function #'osm--zoom-in-wheel
               mwheel-scroll-left-function #'osm--zoom-out-wheel
               mwheel-scroll-right-function #'osm--zoom-in-wheel
-              bookmark-make-record-function #'osm--bookmark-record-default)
+              bookmark-make-record-function #'osm--bookmark-record-default
+              imenu-create-index-function #'osm--imenu-index)
   (when (boundp 'mwheel-coalesce-scroll-events)
     (setq-local mwheel-coalesce-scroll-events t))
   (when (boundp 'pixel-scroll-precision-mode)
@@ -925,8 +927,10 @@ Local per buffer since the overlays depend on the zoom level.")
            (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
   (dolist (file osm--gpx-files)
+    (when-let ((start (caaadr file)))
+      (funcall fun 'osm-gpx-track (car start) (cdr start) 10 (car file)))
     (cl-loop for (lat lon name) in (cddr file) do
-             (funcall fun 'osm-poi lat lon 15 name)))
+             (funcall fun 'osm-gpx-poi lat lon 15 name)))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon 15 name)))
 
@@ -1586,6 +1590,20 @@ When called interactively, call the function `osm-home'."
                   pins)
       (`(,name ,_group ,id ,lat ,lon ,zoom) (osm--goto lat lon zoom nil id name))
       (_ (user-error "No pin selected")))))
+
+(defun osm--imenu-index ()
+  "Create Imenu index."
+  (let (index)
+    (osm--each-pin
+     (lambda (id lat lon zoom name)
+       (push (list name (vector lat lon zoom) #'osm--imenu-goto)
+             (alist-get (capitalize (substring (symbol-name id) 4))
+                        index nil nil #'equal))))
+    (sort index (lambda (x y) (string< (car x) (car y))))))
+
+(defun osm--imenu-goto (_name pos)
+  "Goto Imenu POS."
+  (osm--goto (aref pos 0) (aref pos 1) (aref pos 2) nil nil nil))
 
 (defun osm--fetch-json (url)
   "Get json from URL."
