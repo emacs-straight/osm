@@ -270,6 +270,7 @@ Should be at least 7 days according to the server usage policies."
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
 (defalias 'osm-prefix-map osm-prefix-map)
 
+;; TODO add support for touchscreen-pinch for zooming.
 (defvar-keymap osm-mode-map
   :doc "Keymap used by `osm-mode'."
   :parent (make-composed-keymap osm-prefix-map special-mode-map)
@@ -283,9 +284,6 @@ Should be at least 7 days according to the server usage policies."
   "<mouse-3>" #'osm-bookmark-set
   "S-<down-mouse-1>" #'ignore
   "S-<mouse-1>" #'osm-mouse-track
-  ;; TODO An osm-mouse-drag like implementation for touchscreen events is
-  ;; needed. Also touchscreen-pinch for zooming.
-  "<touchscreen-begin>" #'ignore
   "<down-mouse-1>" #'osm-mouse-drag
   "<down-mouse-2>" #'osm-mouse-drag
   "<down-mouse-3>" #'osm-mouse-drag
@@ -658,7 +656,8 @@ Local per buffer since the overlays depend on the zoom level.")
                             (osm--update)))))))
     (setq track-mouse 'dragging)
     (set-transient-map map
-                       (lambda () (eq (car-safe last-input-event) 'mouse-movement))
+                       (lambda () (eq (car-safe last-command-event)
+                                      'mouse-movement))
                        (lambda () (setq track-mouse nil)))))
 
 (defun osm--zoom-in-wheel (_n)
