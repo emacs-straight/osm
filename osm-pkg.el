@@ -1,2 +1,2 @@
-;; Generated package description from osm.el  -*- mode: lisp-data; no-byte-compile: t -*-
-(define-package "osm" "1.6.0.20250301.161304" "OpenStreetMap viewer" '((emacs "28.1") (compat "30")) :commit "7af69f09465219d65ec75ffd4bb44a47d7f56dc9" :authors '(("Daniel Mendler" . "mail@daniel-mendler.de")) :maintainer '("Daniel Mendler" . "mail@daniel-mendler.de") :keywords '("network" "multimedia" "hypermedia" "mouse") :url "https://github.com/minad/osm")
+;; Generated package description from mode: lisp-data; .el  -*- osmno-byte-compile: t -*-
+(define-package "osm" "1.7.0.20250404.113122" "OpenStreetMap viewer" '((emacs "28.1") (compat "30")) :commit "72112b358c41d2147122b217d11f272a22f285e4" :authors '(("Daniel Mendler" . "mail@daniel-mendler.de")) :maintainer '("Daniel Mendler" . "mail@daniel-mendler.de") :keywords '("network" "multimedia" "hypermedia" "mouse") :url "https://github.com/minad/osm")
