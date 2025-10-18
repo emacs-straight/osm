@@ -5,7 +5,7 @@
 ;; Author: Daniel Mendler <mail@daniel-mendler.de>
 ;; Maintainer: Daniel Mendler <mail@daniel-mendler.de>
 ;; Created: 2022
-;; Version: 1.8
+;; Version: 1.9
 ;; Package-Requires: ((emacs "29.1") (compat "30"))
 ;; URL: https://github.com/minad/osm
 ;; Keywords: network, multimedia, hypermedia, mouse
@@ -1672,8 +1672,8 @@ See `osm-search-server' and `osm-search-language' for customization."
              (osm--table-with-metadata
               results '((display-sort-function . identity)
                         (cycle-sort-function . identity)
-                        (eager-display . t))
-              nil t nil t))
+                        (eager-display . t)))
+             nil t nil t)
             results)
            (error "No selection"))))
     (osm--goto (cadr selected) (caddr selected)
