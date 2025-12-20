@@ -4,6 +4,10 @@
 
 * Development
 
+- Make sure that ~--disable~ is passed as first argument to curl.
+
+* Version 1.11 (2025-12-19)
+
 - New command =osm-url= which handles standard Geo, OpenStreetMap.org and Google
   Maps URLs.
 - Register =osm-url= for both ~geo:~ and Google Maps URLs.
