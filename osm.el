@@ -38,8 +38,8 @@
 ;; tracks.
 
 ;; osm.el requires Emacs 29 and depends on the external `curl' program.
-;; Emacs must be built with libxml, libjansson, librsvg, libjpeg and
-;; libpng support.
+;; Emacs must be built with libxml, libjansson, librsvg, libjpeg, libpng
+;; and libwebp support.
 
 ;;; Code:
 
@@ -80,8 +80,8 @@ The server must offer the nominatim.org API."
 (defcustom osm-server-defaults
   '( :min-zoom 2
      :max-zoom 19
-     :download-batch 4
-     :max-connections 2
+     :download-batch 8
+     :max-connections 3
      :subdomains ("a" "b" "c"))
   "Default server properties.
 See also `osm-server-list'."
@@ -91,14 +91,14 @@ See also `osm-server-list'."
   '((default
      :name "Carto"
      :description "Standard Carto map provided by OpenStreetMap"
-     :url "https://%s.tile.openstreetmap.org/%z/%x/%y.png"
+     :url "https://tile.openstreetmap.org/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
     (de
      :name "Carto(de)"
      :description "Localized Carto map provided by OpenStreetMap Germany"
-     :url "https://%s.tile.openstreetmap.de/%z/%x/%y.png"
+     :url "https://tile.openstreetmap.de/%z/%x/%y.png"
      :group "Standard"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
@@ -115,7 +115,7 @@ See also `osm-server-list'."
      :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
      :group "Special Purpose"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/updates/2013-09-29_a_new_window_on_openstreetmap_data}"))
+                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"))
     (cyclosm
      :name "CyclOSM"
      :description "Bicycle-oriented map provided by OpenStreetMap France"
@@ -130,18 +130,10 @@ See also `osm-server-list'."
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
-    (opentopomap
-     :name "OpenTopoMap"
-     :description "Topographical map provided by OpenTopoMap"
-     :url "https://%s.tile.opentopomap.org/%z/%x/%y.png"
-     :group "Topographical"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenTopoMap|https://www.opentopomap.org} ({CC-BY-SA|https://creativecommons.org/licenses/by-sa/3.0/})"
-                 "Elevation data: {SRTM|https://www2.jpl.nasa.gov/srtm/}"))
     (opvn
      :name "ÖPNV" :max-zoom 18
      :description "Base layer with public transport information"
-     :url "http://%s.tile.memomaps.de/tilegen/%z/%x/%y.png"
+     :url "http://tileserver.memomaps.de/tilegen/%z/%x/%y.png"
      :group "Transportation"
      :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
                  "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
@@ -839,7 +831,7 @@ Local per buffer since the overlays depend on the zoom level.")
      (lambda ()
        (dolist (dir (directory-files osm-tile-directory t "\\`[^.]+\\'" t))
          (dolist (file (directory-files
-                        dir t "\\.\\(?:png\\|jpe?g\\)\\(?:\\.tmp\\)?\\'" t))
+                        dir t "\\.\\(?:png\\|jpe?g\\|webp\\)\\(?:\\.tmp\\)?\\'" t))
            (when (> (float-time (time-since
                                  (file-attribute-modification-time
                                   (file-attributes file))))
@@ -853,7 +845,7 @@ Local per buffer since the overlays depend on the zoom level.")
   (let (req)
     (unless (display-graphic-p)
       (push "graphical display" req))
-    (dolist (type '(svg jpeg png))
+    (dolist (type '(svg jpeg png webp))
       (unless (image-type-available-p type)
         (push (format "%s support" type) req)))
     (unless (libxml-available-p)
@@ -861,8 +853,8 @@ Local per buffer since the overlays depend on the zoom level.")
     (unless (json-available-p)
       (push "libjansson" req))
     (when req
-      (error "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
-             (string-join req ", ")))))
+      (warn "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+            (string-join req ", ")))))
 
 (define-derived-mode osm-mode special-mode "Osm"
   "OpenStreetMap viewer mode."
@@ -1093,8 +1085,8 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
                           "</svg>")))
             (list 'image :width 256 :height 256 :type 'svg :base-uri file :data svg-text :map areas))
         (list 'image :width 256 :height 256 :file file :type
-              (if (member (file-name-extension file) '("jpg" "jpeg"))
-                  'jpeg 'png))))))
+              (let ((ext (intern (file-name-extension file))))
+                (if (eq ext 'jpg) 'jpeg ext)))))))
 
 (defun osm--get-tile (x y)
   "Get tile at X/Y."
