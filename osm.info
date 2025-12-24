@@ -1,4 +1,4 @@
-This is doc4JqnIP.info, produced by makeinfo version 7.1.1 from
+This is doclVcyEC.info, produced by makeinfo version 7.1.1 from
 osm.texi.
 
 INFO-DIR-SECTION Emacs misc features
@@ -7,7 +7,7 @@ START-INFO-DIR-ENTRY
 END-INFO-DIR-ENTRY
 
 
-File: doc4JqnIP.info,  Node: Top,  Next: Features,  Up: (dir)
+File: doclVcyEC.info,  Node: Top,  Next: Features,  Up: (dir)
 
 osm.el - OpenStreetMap viewer for Emacs
 ***************************************
@@ -19,7 +19,7 @@ servers via the ‘curl’ program.  The package comes with a list of
 multiple preconfigured tile servers.  You can bookmark your favorite
 locations using regular Emacs bookmarks or create links from Org files
 to locations.  Furthermore the package provides commands to search for
-locations by name and to open and display GPX tracks.
+locations, or plan routes by name and to open and display GPX tracks.
 
 * Menu:
 
@@ -32,7 +32,7 @@ locations by name and to open and display GPX tracks.
 * Contributions::
 
 
-File: doc4JqnIP.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: Top
+File: doclVcyEC.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: Top
 
 1 Features
 **********
@@ -52,7 +52,7 @@ File: doc4JqnIP.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: To
    • Multiple preconfigured tile servers
 
 
-File: doc4JqnIP.info,  Node: Configuration,  Next: Bookmarks Org links Geo urls and Elisp links,  Prev: Features,  Up: Top
+File: doclVcyEC.info,  Node: Configuration,  Next: Bookmarks Org links Geo urls and Elisp links,  Prev: Features,  Up: Top
 
 2 Configuration
 ***************
@@ -86,7 +86,7 @@ and aerial maps.
      )
 
 
-File: doc4JqnIP.info,  Node: Bookmarks Org links Geo urls and Elisp links,  Next: Distance measurement,  Prev: Configuration,  Up: Top
+File: doclVcyEC.info,  Node: Bookmarks Org links Geo urls and Elisp links,  Next: Distance measurement,  Prev: Configuration,  Up: Top
 
 3 Bookmarks, Org links, Geo urls and Elisp links
 ************************************************
@@ -139,7 +139,7 @@ mouse.  See the docstrings of the commands ‘osm-bookmark-set’ and
           (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 
 
-File: doc4JqnIP.info,  Node: Distance measurement,  Next: Commands and Key Bindings,  Prev: Bookmarks Org links Geo urls and Elisp links,  Up: Top
+File: doclVcyEC.info,  Node: Distance measurement,  Next: Commands and Key Bindings,  Prev: Bookmarks Org links Geo urls and Elisp links,  Up: Top
 
 4 Distance measurement
 **********************
@@ -152,7 +152,7 @@ shown in the echo area.  You can select the way points of the track and
 delete them with ‘d’ or ‘DEL’.
 
 
-File: doc4JqnIP.info,  Node: Commands and Key Bindings,  Next: Related projects,  Prev: Distance measurement,  Up: Top
+File: doclVcyEC.info,  Node: Commands and Key Bindings,  Next: Related projects,  Prev: Distance measurement,  Up: Top
 
 5 Commands and Key Bindings
 ***************************
@@ -165,12 +165,13 @@ sufficient to press the key ‘s’ only to initiate a search.
 
    • ‘h’: ‘osm-home’ - Open new map at home coordinates
    • ‘s’: ‘osm-search’ - Search and jump to location
+   • ‘r’: ‘osm-route’ - Search for a route between two locations
    • ‘t’: ‘osm-goto’ - Go to coordinates
    • ‘u’: ‘osm-url’ - Go to Geo URL, OpenStreetMap.org or Google Maps
      URL.
    • ‘v’: ‘osm-server’ - Select server
    • ‘j’: ‘osm-jump’ - Jump to pin (bookmark or POI)
-   • ‘x’: ‘osm-gpx-show’ - Show GPX file in map viewer
+   • ‘f’: ‘osm-open’ - Open GPX file in map viewer
 
    Some additional key bindings are available in Osm buffers:
 
@@ -188,7 +189,7 @@ sufficient to press the key ‘s’ only to initiate a search.
      point)
    • ‘n’: ‘osm-rename’ - Rename selected pin
    • ‘c’: ‘osm-center’ - Center to currently selected pin
-   • ‘X’: ‘osm-gpx-hide’ - Hide overlays from GPX file
+   • ‘F’, ‘R’: ‘osm-hide’ - Hide GPX file or route
    • ‘l’: ‘org-store-link’ - Store Org link
    • ‘u’: ‘osm-save-url’ - Save geo url in the kill ring
    • ‘b’: ‘osm-bookmark-set’ - Set bookmark
@@ -196,7 +197,7 @@ sufficient to press the key ‘s’ only to initiate a search.
    • ‘o’: ‘clone-buffer’ - Clone buffer
 
 
-File: doc4JqnIP.info,  Node: Related projects,  Next: Contributions,  Prev: Commands and Key Bindings,  Up: Top
+File: doclVcyEC.info,  Node: Related projects,  Next: Contributions,  Prev: Commands and Key Bindings,  Up: Top
 
 6 Related projects
 ******************
@@ -209,7 +210,7 @@ There have been other attempts at map viewers in Emacs before.
    • <https://github.com/emacsattic/org-osm-link>
 
 
-File: doc4JqnIP.info,  Node: Contributions,  Prev: Related projects,  Up: Top
+File: doclVcyEC.info,  Node: Contributions,  Prev: Related projects,  Up: Top
 
 7 Contributions
 ***************
@@ -222,15 +223,15 @@ copyright assignment to the FSF.
 
 Tag Table:
 Node: Top209
-Node: Features1125
-Node: Configuration1755
-Node: Bookmarks Org links Geo urls and Elisp links3152
-Ref: Org link examples4382
-Ref: Elisp link examples5270
-Node: Distance measurement6011
-Node: Commands and Key Bindings6601
-Node: Related projects8833
-Node: Contributions9247
+Node: Features1141
+Node: Configuration1771
+Node: Bookmarks Org links Geo urls and Elisp links3168
+Ref: Org link examples4398
+Ref: Elisp link examples5286
+Node: Distance measurement6027
+Node: Commands and Key Bindings6617
+Node: Related projects8920
+Node: Contributions9334
 
 End Tag Table
 

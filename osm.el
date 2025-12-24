@@ -34,8 +34,8 @@
 ;; multiple preconfigured tile servers.  You can bookmark your favorite
 ;; locations using regular Emacs bookmarks or create links from Org files
 ;; to locations.  Furthermore the package provides commands to measure
-;; distances, search for locations by name and to open and display GPX
-;; tracks.
+;; distances, search for locations and routes by name and to open and
+;; display GPX tracks.
 
 ;; osm.el requires Emacs 29 and depends on the external `curl' program.
 ;; Emacs must be built with libxml, libjansson, librsvg, libjpeg, libpng
@@ -77,6 +77,12 @@ A comma-separated specifies descending order of preference.  See also
 The server must offer the nominatim.org API."
   :type 'string)
 
+(defcustom osm-route-server
+  "https://routing.openstreetmap.de/routed-%b/route/v1/driving/%x,%y;%X,%Y?steps=false&overview=full&alternatives=false&geometries=geojson"
+  "Server used for route planning.
+The server must offer the OSRM API."
+  :type 'string)
+
 (defcustom osm-server-defaults
   '( :min-zoom 2
      :max-zoom 19
@@ -88,55 +94,64 @@ See also `osm-server-list'."
   :type 'plist)
 
 (defcustom osm-server-list
-  '((default
-     :name "Carto"
-     :description "Standard Carto map provided by OpenStreetMap"
-     :url "https://tile.openstreetmap.org/%z/%x/%y.png"
-     :group "Standard"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"))
-    (de
-     :name "Carto(de)"
-     :description "Localized Carto map provided by OpenStreetMap Germany"
-     :url "https://tile.openstreetmap.de/%z/%x/%y.png"
-     :group "Standard"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"))
-    (fr
-     :name "Carto(fr)"
-     :description "Localized Carto map by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
-     :group "Standard"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"))
-    (humanitarian
-     :name "Humanitarian"
-     :description "Humanitarian map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
-     :group "Special Purpose"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"))
-    (cyclosm
-     :name "CyclOSM"
-     :description "Bicycle-oriented map provided by OpenStreetMap France"
-     :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
-     :group "Transportation"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"))
-    (openriverboatmap
-     :name "OpenRiverBoatMap"
-     :description "Waterways map provided by OpenStreetMap France"
-     :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
-     :group "Transportation"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"))
-    (opvn
-     :name "ÖPNV" :max-zoom 18
-     :description "Base layer with public transport information"
-     :url "http://tileserver.memomaps.de/tilegen/%z/%x/%y.png"
-     :group "Transportation"
-     :copyright ("Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"
-                 "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}")))
+  (let ((copyright-fix "{Fix the map|https://www.openstreetmap.org/fixthemap}")
+        (copyright-data "Map data © {OpenStreetMap|https://www.openstreetmap.org/copyright} contributors"))
+    `((default
+       :name "Carto"
+       :description "Standard Carto map provided by OpenStreetMap"
+       :url "https://tile.openstreetmap.org/%z/%x/%y.png"
+       :group "Standard"
+       :copyright (,copyright-data
+                   "Map style © {OpenStreetMap Standard|https://www.openstreetmap.org/copyright}"
+                   ,copyright-fix))
+      (de
+       :name "Carto(de)"
+       :description "Localized Carto map provided by OpenStreetMap Germany"
+       :url "https://tile.openstreetmap.de/%z/%x/%y.png"
+       :group "Standard"
+       :copyright (,copyright-data
+                   "Map style © {OpenStreetMap Deutschland|https://www.openstreetmap.de/germanstyle.html}"
+                   ,copyright-fix))
+      (fr
+       :name "Carto(fr)"
+       :description "Localized Carto map by OpenStreetMap France"
+       :url "https://%s.tile.openstreetmap.fr/osmfr/%z/%x/%y.png"
+       :group "Standard"
+       :copyright (,copyright-data
+                   "Map style © {OpenStreetMap France|https://www.openstreetmap.fr/mentions-legales/}"
+                   ,copyright-fix))
+      (humanitarian
+       :name "Humanitarian"
+       :description "Humanitarian map provided by OpenStreetMap France"
+       :url "https://%s.tile.openstreetmap.fr/hot/%z/%x/%y.png"
+       :group "Special Purpose"
+       :copyright (,copyright-data
+                   "Map style © {Humanitarian OpenStreetMap Team|https://www.hotosm.org/}"
+                   ,copyright-fix))
+      (cyclosm
+       :name "CyclOSM"
+       :description "Bicycle-oriented map provided by OpenStreetMap France"
+       :url "https://%s.tile-cyclosm.openstreetmap.fr/cyclosm/%z/%x/%y.png"
+       :group "Transportation"
+       :copyright (,copyright-data
+                   "Map style © {CyclOSM|https://www.cyclosm.org/} contributors"
+                   ,copyright-fix))
+      (openriverboatmap
+       :name "OpenRiverBoatMap"
+       :description "Waterways map provided by OpenStreetMap France"
+       :url "https://%s.tile.openstreetmap.fr/openriverboatmap/%z/%x/%y.png"
+       :group "Transportation"
+       :copyright (,copyright-data
+                   "Map style © {OpenRiverBoatMap|https://github.com/tilery/OpenRiverboatMap}"
+                   ,copyright-fix))
+      (opvn
+       :name "ÖPNV" :max-zoom 18
+       :description "Base layer with public transport information"
+       :url "http://tileserver.memomaps.de/tilegen/%z/%x/%y.png"
+       :group "Transportation"
+       :copyright (,copyright-data
+                   "Map style © {ÖPNVKarte|https://www.öpnvkarte.de}"
+                   ,copyright-fix))))
   "List of tile servers.
 
 Allowed keys:
@@ -169,15 +184,15 @@ the domain name and the :user to the string \"apikey\"."
 (defcustom osm-pin-colors
   '((osm-selected . "#e20")
     (osm-bookmark . "#f80")
-    (osm-home . "#80f")
-    (osm-track . "#00e")
-    (osm-gpx-poi . "#88f")
-    (osm-gpx-track . "#88f"))
+    (osm-home . "#a0f")
+    (osm-track . "#f0f")
+    (osm-file . "#03f")
+    (osm-route . "#00e"))
   "Colors of pins."
   :type '(alist :key-type symbol :value-type string))
 
 (defcustom osm-track-style
-  "stroke:#00a;stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.4;"
+  "stroke-width:5;stroke-linejoin:round;stroke-linecap:round;opacity:0.6;"
   "SVG style used to draw tracks."
   :type 'string)
 
@@ -257,8 +272,8 @@ Should be at least 7 days according to the server usage policies."
   "t" #'osm-goto
   "u" #'osm-url
   "j" #'osm-jump
-  "x" #'osm-gpx-show
-  "X" #'osm-gpx-hide)
+  "r" #'osm-route
+  "f" #'osm-open)
 
 ;;;###autoload (autoload 'osm-prefix-map "osm" nil t 'keymap)
 (defalias 'osm-prefix-map osm-prefix-map)
@@ -308,7 +323,8 @@ Should be at least 7 days according to the server usage policies."
   "u" #'osm-save-url
   "l" 'org-store-link
   "b" #'osm-bookmark-set
-  "X" #'osm-gpx-hide
+  "F" #'osm-hide
+  "R" #'osm-hide
   "<remap> <scroll-down-command>" #'osm-down
   "<remap> <scroll-up-command>" #'osm-up
   "<" nil
@@ -327,20 +343,22 @@ Should be at least 7 days according to the server usage policies."
     ["Go to coordinates" osm-goto]
     ["Go to URL" osm-url]
     ["Jump to pin" osm-jump]
-    ["Search by name" osm-search]
     ["Change tile server" osm-server]
     "--"
-    ["Org Link" org-store-link]
+    ["Search by name" osm-search]
+    ["Plan route" osm-route]
+    "--"
+    ["Org link" org-store-link]
     ["Geo URL" osm-save-url]
-    ["Elisp Link" (osm-save-url t)]
+    ["Elisp link" (osm-save-url t)]
     ("Bookmark"
      ["Set" osm-bookmark-set]
      ["Jump" osm-bookmark-jump]
      ["Rename" osm-bookmark-rename]
      ["Delete" osm-bookmark-delete])
     "--"
-    ["Show GPX file" osm-gpx-show]
-    ["Hide GPX file" osm-gpx-hide]
+    ["Open geometry file" osm-open]
+    ["Hide file or route" osm-hide]
     "--"
     ["Clone buffer" clone-buffer]
     ["Revert buffer" revert-buffer]
@@ -378,8 +396,8 @@ Should be at least 7 days according to the server usage policies."
 (defvar osm--tile-age 0
   "Tile age, incremented on every update.")
 
-(defvar osm--gpx-files nil
-  "Global list of loaded tracks.")
+(defvar osm--datasets nil
+  "Global list of loaded data sets.")
 
 (defvar osm--track nil
   "List of track coordinates.")
@@ -458,15 +476,39 @@ Local per buffer since the overlays depend on the zoom level.")
   (setq lat (* lat (/ float-pi 180.0)))
   (- 0.5 (/ (log (+ (tan lat) (/ 1.0 (cos lat)))) float-pi 2)))
 
-(defun osm--boundingbox-to-zoom (lat1 lat2 lon1 lon2)
-  "Compute zoom level from boundingbox LAT1 to LAT2 and LON1 to LON2."
-  (let ((w (/ (frame-pixel-width) 256))
-        (h (/ (frame-pixel-height) 256)))
+(defun osm--bb-to-zoom (bb)
+  "Zoom level from bounding box BB."
+  (pcase-let ((`(,min-lat ,max-lat ,min-lon ,max-lon) bb)
+              (w (/ (frame-pixel-width) 256))
+              (h (/ (frame-pixel-height) 256)))
     (max (osm--server-property :min-zoom)
          (min
           (osm--server-property :max-zoom)
-          (min (logb (/ w (abs (- (osm--lon-to-normalized-x lon1) (osm--lon-to-normalized-x lon2)))))
-               (logb (/ h (abs (- (osm--lat-to-normalized-y lat1) (osm--lat-to-normalized-y lat2))))))))))
+          (min (logb (/ w (abs (- (osm--lon-to-normalized-x min-lon)
+                                  (osm--lon-to-normalized-x max-lon)))))
+               (logb (/ h (abs (- (osm--lat-to-normalized-y min-lat)
+                                  (osm--lat-to-normalized-y max-lat))))))))))
+
+(defun osm--bb-center (bb)
+  "Center of bounding box BB."
+  (pcase-let ((`(,min-lat ,max-lat ,min-lon ,max-lon) bb))
+    (cons (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2))))
+
+(defun osm--bb-from-track (track waypoints)
+  "Compute bounding box from TRACK and WAYPOINTS."
+  (let ((min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+    (cl-loop for seg in track do
+             (cl-loop for (lat . lon) in seg do
+                      (setq min-lat (min lat min-lat)
+                            max-lat (max lat max-lat)
+                            min-lon (min lon min-lon)
+                            max-lon (max lon max-lon))))
+    (cl-loop for (lat lon . _) in waypoints do
+             (setq min-lat (min lat min-lat)
+                   max-lat (max lat max-lat)
+                   min-lon (min lon min-lon)
+                   max-lon (max lon max-lon)))
+    (list min-lat max-lat min-lon max-lon)))
 
 (defun osm--x-to-lon (x zoom)
   "Return longitude in degrees for X/ZOOM."
@@ -721,7 +763,7 @@ Local per buffer since the overlays depend on the zoom level.")
                (length osm--track) (+ len1 len2)
                (if (or (= len1 0) (= len2 0))
                    sel-name
-                 (format "%.2fkm → %s → %.2fkm"
+                 (format "%.2fkm ⟶ %s ⟶ %.2fkm"
                          len1 sel-name len2))))))
 
 (defun osm--pin-at (event &optional type)
@@ -840,6 +882,14 @@ Local per buffer since the overlays depend on the zoom level.")
          (when (directory-empty-p dir)
            (ignore-errors (delete-directory dir))))))))
 
+;; TODO: Use `completion-table-with-metadata'
+(defun osm--table-with-metadata (table metadata)
+  "Return new completion TABLE with METADATA."
+  (lambda (string pred action)
+    (if (eq action 'metadata)
+        `(metadata . ,metadata)
+      (complete-with-action action table string pred))))
+
 (defun osm--check-libraries ()
   "Check that Emacs is compiled with the necessary libraries."
   (let (req)
@@ -853,7 +903,7 @@ Local per buffer since the overlays depend on the zoom level.")
     (unless (json-available-p)
       (push "libjansson" req))
     (when req
-      (warn "Osm: Please compile Emacs with the required libraries, %s needed to proceed"
+      (warn "osm: Please compile Emacs with the required libraries, %s needed to proceed"
             (string-join req ", ")))))
 
 (define-derived-mode osm-mode special-mode "Osm"
@@ -931,11 +981,14 @@ Local per buffer since the overlays depend on the zoom level.")
            if (eq (bookmark-prop-get bm 'handler) #'osm-bookmark-jump) do
            (pcase-let ((`(,lat ,lon ,zoom) (bookmark-prop-get bm 'coordinates)))
              (funcall fun 'osm-bookmark lat lon zoom (car bm))))
-  (dolist (file osm--gpx-files)
-    (when-let ((start (caaadr file)))
-      (funcall fun 'osm-gpx-track (car start) (cdr start) 10 (car file)))
-    (cl-loop for (lat lon name) in (cddr file) do
-             (funcall fun 'osm-gpx-poi lat lon 15 name)))
+  (cl-loop for (dname id segs waypoints) in osm--datasets do
+    (when-let ((start (caar segs)))
+      (funcall fun id (car start) (cdr start) 10
+               (propertize dname 'osm-dataset dname)))
+    (cl-loop for (lat lon name) in waypoints do
+             (funcall fun id lat lon 15
+                      (propertize (format "%s [%s]" name dname)
+                                  'osm-dataset dname))))
   (cl-loop for (lat lon name) in osm--track do
            (funcall fun 'osm-track lat lon 15 name)))
 
@@ -966,8 +1019,8 @@ Local per buffer since the overlays depend on the zoom level.")
 ;; TODO: The Bresenham algorithm used here to add the line segments to the tiles
 ;; has the issue that lines which go along a tile border may be drawn only
 ;; partially. Use a more precise algorithm instead.
-(defun osm--add-track (tracks seg)
-  "Add track segment SEG to TRACKS hash table."
+(defun osm--add-track (tracks id seg)
+  "Add track segment SEG with ID to TRACKS hash table."
   (when seg
     (let ((p0 (cons (osm--lon-to-x (or (car-safe (cdar seg)) (cdar seg)) osm--zoom)
                     (osm--lat-to-y (caar seg) osm--zoom))))
@@ -994,11 +1047,11 @@ Local per buffer since the overlays depend on the zoom level.")
               (while
                   (let ((ey (> (* err 2) dy))
                         (ex (< (* err 2) dx)))
-                    (push line (gethash (cons x0 y0) tracks))
+                    (push line (alist-get id (gethash (cons x0 y0) tracks)))
                     (unless (and (= x0 x1) (= y0 y1))
                       (when (and ey ex)
-                        (push line (gethash (cons x0 (+ y0 sy)) tracks))
-                        (push line (gethash (cons (+ x0 sx) y0) tracks)))
+                        (push line (alist-get id (gethash (cons x0 (+ y0 sy)) tracks)))
+                        (push line (alist-get id (gethash (cons (+ x0 sx) y0) tracks))))
                       (when ey
                         (cl-incf err dy)
                         (cl-incf x0 sx))
@@ -1018,10 +1071,9 @@ Local per buffer since the overlays depend on the zoom level.")
     (let ((pins (make-hash-table :test #'equal))
           (tracks (make-hash-table :test #'equal)))
       (osm--each-pin (apply-partially #'osm--add-pin pins))
-      (dolist (file osm--gpx-files)
-        (dolist (seg (cadr file))
-          (osm--add-track tracks seg)))
-      (osm--add-track tracks osm--track)
+      (cl-loop for (_dname id segs _waypoints) in osm--datasets do
+               (dolist (seg segs) (osm--add-track tracks id seg)))
+      (osm--add-track tracks 'osm-track osm--track)
       (setq osm--overlays (list osm--zoom pins tracks))))
   (let ((pins (gethash (cons x y) (cadr osm--overlays)))
         (tracks (gethash (cons x y) (caddr osm--overlays))))
@@ -1038,6 +1090,23 @@ TPIN is an optional pin."
           (let* ((areas nil)
                  (x0 (* 256 x))
                  (y0 (* 256 y))
+                 (svg-track
+                  (lambda (track)
+                    (format
+                     "<path style='%s' stroke='%s' d='%s'/>"
+                     osm-track-style
+                     (cdr (assq (car track) osm-pin-colors))
+                     (let (last)
+                       (mapconcat
+                        (pcase-lambda (`(,beg . ,end))
+                          (prog1
+                              (if (equal beg last)
+                                  (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
+                                (format "M%s %sL%s %s"
+                                        (- (car beg) x0) (- (cdr beg) y0)
+                                        (- (car end) x0) (- (cdr end) y0)))
+                            (setq last end)))
+                        (cdr track) "")))))
                  (svg-pin
                   (lambda (pin)
                     (pcase-let* ((`(,p ,q ,_lat ,_lon ,id ,name) pin)
@@ -1061,21 +1130,7 @@ xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink'>
 <image xlink:href='"
                           (file-name-nondirectory file)
                           "' height='256' width='256'/>"
-                          (when-let (track (cdr overlays))
-                            (format
-                             "<path style='%s' d='%s'/>"
-                             osm-track-style
-                             (let (last)
-                               (mapconcat
-                                (pcase-lambda (`(,beg . ,end))
-                                  (prog1
-                                      (if (equal beg last)
-                                          (format "L%s %s" (- (car end) x0) (- (cdr end) y0))
-                                        (format "M%s %sL%s %s"
-                                                (- (car beg) x0) (- (cdr beg) y0)
-                                                (- (car end) x0) (- (cdr end) y0)))
-                                    (setq last end)))
-                                track ""))))
+                          (mapconcat svg-track (cdr overlays) "")
                           (pcase-exhaustive osm-tile-border
                             ('nil nil)
                             ('debug "<path d='M 1 1 L 1 255 255 255 255 1 Z' stroke='#000' stroke-width='2' fill='none'/>")
@@ -1443,7 +1498,7 @@ See also `osm-save-url'."
       (osm--goto lat lon zoom nil 'osm-selected "Geo Link")))
    ;; Short URLs
    ((string-match-p "\\`https?://.*\\(openstreetmap\\|osm\\|goo.*maps\\|maps.*goo\\)" url)
-    (osm-url (string-remove-prefix "http" (osm--get-redirect url))))
+    (osm-url (string-remove-prefix "http" (osm--fetch-redirect url))))
    (t
     (user-error "Invalid URL"))))
 
@@ -1532,7 +1587,6 @@ When called interactively, call the function `osm-home'."
   (let ((lat (or (car osm--pin) osm--lat))
         (lon (or (cadr osm--pin) osm--lon)))
     (osm--set-pin 'osm-selected lat lon name 'quiet)
-    (message "%s: Fetching name of %.2f° %.2f° from %s..." name lat lon osm-search-server)
     ;; Redisplay before slow fetching
     (osm--update)
     (redisplay)
@@ -1583,19 +1637,24 @@ When called interactively, call the function `osm-home'."
   "Delete selected pin (bookmark or way point)."
   (interactive nil osm-mode)
   (osm--barf-unless-osm)
-  (pcase (caddr osm--pin)
-    ('nil nil)
-    ('osm-bookmark (osm-bookmark-delete (cadddr osm--pin)))
-    ('osm-track (osm--track-delete))
-    (_ (setq osm--pin nil) (osm--update))))
+  (pcase-let ((`(,_lat ,_lon ,id ,name) osm--pin))
+    (pcase id
+      ('nil nil)
+      ('osm-bookmark (osm-bookmark-delete name))
+      ('osm-track (osm--track-delete))
+      ((or 'osm-file 'osm-route)
+       (setq osm--pin nil)
+       (osm-hide (get-text-property 0 'osm-dataset name)))
+      (_ (setq osm--pin nil) (osm--update)))))
 
 (defun osm-rename ()
   "Rename selected pin (bookmark or way point)."
   (interactive nil osm-mode)
   (osm--barf-unless-osm)
-  (pcase (caddr osm--pin)
-    ('osm-bookmark (osm-bookmark-rename (cadddr osm--pin)))
-    ('osm-track (osm--track-rename))))
+  (pcase-let ((`(,_lat ,_lon ,id ,name) osm--pin))
+    (pcase id
+      ('osm-bookmark (osm-bookmark-rename name))
+      ('osm-track (osm--track-rename)))))
 
 ;;;###autoload
 (defun osm-jump ()
@@ -1635,6 +1694,7 @@ When called interactively, call the function `osm-home'."
 (defun osm--fetch-json (url)
   "Get JSON from URL."
   (osm--check-libraries)
+  (message "Contacting %s..." (replace-regexp-in-string "https://\\|/.*" "" url))
   (with-temp-buffer
     (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
            (status (apply #'call-process "curl" nil (current-buffer) nil
@@ -1644,9 +1704,10 @@ When called interactively, call the function `osm-home'."
     (goto-char (point-min))
     (json-parse-buffer :array-type 'list :object-type 'alist)))
 
-(defun osm--get-redirect (url)
+(defun osm--fetch-redirect (url)
   "Get redirect location from URL."
   (osm--check-libraries)
+  (message "Contacting %s..." (replace-regexp-in-string "https://\\|/.*" "" url))
   (with-temp-buffer
     (let* ((default-process-coding-system '(utf-8-unix . utf-8-unix))
            (status (apply #'call-process "curl" nil (current-buffer) nil
@@ -1659,9 +1720,8 @@ When called interactively, call the function `osm-home'."
         (match-string 1)
       (error "Invalid redirect %s" url))))
 
-(defun osm--search (needle)
+(defun osm--search-request (needle)
   "Globally search for NEEDLE and return the list of results."
-  (message "Contacting %s" osm-search-server)
   (mapcar
    (lambda (x)
      (let ((lat (string-to-number (alist-get 'lat x)))
@@ -1676,109 +1736,133 @@ When called interactively, call the function `osm-home'."
             osm-search-server osm-search-language
             (url-encode-url needle)))))
 
+(defun osm--search-read (prompt)
+  "Read location via `completing-read' with PROMPT."
+  (minibuffer-with-setup-hook
+      (lambda ()
+        (when (eq (keymap-local-lookup "SPC") #'minibuffer-complete-word)
+          ;; Override dreaded `minibuffer-complete-word' for default
+          ;; completion.  When will this keybinding finally get removed from
+          ;; default completion?
+          (use-local-map (make-composed-keymap
+                          (define-keymap "SPC" nil)
+                          (current-local-map)))))
+    (completing-read prompt
+                     (osm--table-with-metadata
+                      (delete-dups (copy-sequence osm--search-history))
+                      '((display-sort-function . identity)
+                        (cycle-sort-function . identity)))
+                     nil nil nil 'osm--search-history)))
+
+(defun osm--search-select (needle lucky)
+  "Search for NEEDLE and return selected result.
+Take first result if LUCKY is non-nil."
+  (let ((results (or (osm--search-request needle)
+                     (error "No results for `%s'" needle))))
+    (or
+     (and (or lucky (not (cdr results))) (car results))
+     (assoc
+      (completing-read
+       (format "Matches for '%s': " needle)
+       (osm--table-with-metadata
+        results '((display-sort-function . identity)
+                  (cycle-sort-function . identity)
+                  (eager-display . t)))
+       nil t nil t)
+      results)
+     (error "No selection"))))
+
 ;;;###autoload
 (defun osm-search (needle &optional lucky)
   "Globally search for NEEDLE on `osm-search-server' and display the map.
 If the prefix argument LUCKY is non-nil take the first result and jump there.
 See `osm-search-server' and `osm-search-language' for customization."
-  (interactive
-   (list
-    (minibuffer-with-setup-hook
-        (lambda ()
-          (when (eq (keymap-local-lookup "SPC") #'minibuffer-complete-word)
-            ;; Override dreaded `minibuffer-complete-word' for default
-            ;; completion.  When will this keybinding finally get removed from
-            ;; default completion?
-            (use-local-map (make-composed-keymap
-                            (define-keymap "SPC" nil)
-                            (current-local-map)))))
-      (completing-read "Location: "
-                       (osm--table-with-metadata
-                        osm--search-history '((display-sort-function . identity)
-                                              (cycle-sort-function . identity)))
-                       nil nil nil 'osm--search-history))
-    current-prefix-arg))
-  ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
-  (let* ((results (or (osm--search needle) (error "No results for `%s'" needle)))
-         (selected
-          (or
-           (and (or lucky (not (cdr results))) (car results))
-           (assoc
-            (completing-read
-             (format "Matches for '%s': " needle)
-             (osm--table-with-metadata
-              results '((display-sort-function . identity)
-                        (cycle-sort-function . identity)
-                        (eager-display . t)))
-             nil t nil t)
-            results)
-           (error "No selection"))))
+  (interactive (list (osm--search-read "Location: ") current-prefix-arg))
+  (let ((selected (osm--search-select needle lucky)))
+    ;; TODO: Add search bounded to current viewbox, bounded=1, viewbox=x1,y1,x2,y2
     (osm--goto (cadr selected) (caddr selected)
-               (apply #'osm--boundingbox-to-zoom (cdddr selected))
+               (osm--bb-to-zoom (cdddr selected))
                nil 'osm-selected (car selected))))
 
-;; TODO: Use `completion-table-with-metadata'
-(defun osm--table-with-metadata (table metadata)
-  "Return new completion TABLE with METADATA."
-  (lambda (string pred action)
-    (if (eq action 'metadata)
-        `(metadata . ,metadata)
-      (complete-with-action action table string pred))))
+;;;###autoload
+(defun osm-route ()
+  "Fetch a route between two locations."
+  (interactive)
+  (let* ((from-name (osm--search-read "Route from: "))
+         (from (osm--search-select from-name nil))
+         (to-name (osm--search-read "Route to: "))
+         (to (osm--search-select to-name nil))
+         (by (completing-read "Go by: " '("Car" "Bike" "Foot") nil t nil t))
+         (data (osm--fetch-json
+                (format-spec osm-route-server
+                             `((?b . ,(downcase by))
+                               (?x . ,(caddr from)) (?y . ,(cadr from))
+                               (?X . ,(caddr to)) (?Y . ,(cadr to))))))
+         (route (car (alist-get 'routes data)))
+         (coords (or (alist-get 'coordinates (alist-get 'geometry route))
+                     (error "No route available")))
+         (waypoints (alist-get 'waypoints data)))
+    (osm--add-dataset
+     (format "%s ⟶ %s (%s, %skm, %s)" from-name to-name by
+             (round (alist-get 'distance route) 1000)
+             (seconds-to-string (alist-get 'duration route)))
+     'osm-route
+     (list (mapcar (lambda (x) (cons (cadr x) (car x))) coords))
+     (mapcar (lambda (x)
+               (let ((l (alist-get 'location x)))
+                 (list (cadr l) (car l) (alist-get 'name x))))
+             waypoints))))
 
 ;;;###autoload
-(defun osm-gpx-show (file)
-  "Show the tracks of gpx FILE in an `osm-mode' buffer."
+(defun osm-open (file)
+  "Show the tracks of GPX FILE in an `osm-mode' buffer."
   (interactive "fGPX file: ")
   (osm--check-libraries)
   (let ((dom (with-temp-buffer
                (insert-file-contents file)
-               (libxml-parse-xml-region (point-min) (point-max))))
-        (min-lat 90) (max-lat -90) (min-lon 180) (max-lon -180))
+               (libxml-parse-xml-region (point-min) (point-max)))))
     (unless (eq 'gpx (dom-tag dom))
       (setq dom (dom-child-by-tag dom 'gpx)))
     (unless (and dom (eq 'gpx (dom-tag dom)))
       (error "Not a GPX file"))
-    (setf (alist-get (abbreviate-file-name file) osm--gpx-files nil nil #'equal)
-          (cons
-           (cl-loop
-            for trk in (dom-children dom)
-            if (eq (dom-tag trk) 'trk) nconc
-            (cl-loop
-             for seg in (dom-children trk)
-             if (eq (dom-tag seg) 'trkseg) collect
-             (cl-loop
-              for pt in (dom-children seg)
-              if (eq (dom-tag pt) 'trkpt) collect
-              (let ((lat (string-to-number (dom-attr pt 'lat)))
-                    (lon (string-to-number (dom-attr pt 'lon))))
-                (setq min-lat (min lat min-lat)
-                      max-lat (max lat max-lat)
-                      min-lon (min lon min-lon)
-                      max-lon (max lon max-lon))
-                (cons lat lon)))))
-           (cl-loop
-            for pt in (dom-children dom)
-            if (eq (dom-tag pt) 'wpt) collect
-            (let ((lat (string-to-number (dom-attr pt 'lat)))
-                  (lon (string-to-number (dom-attr pt 'lon))))
-              (setq min-lat (min lat min-lat)
-                    max-lat (max lat max-lat)
-                    min-lon (min lon min-lon)
-                    max-lon (max lon max-lon))
-              (list lat lon (with-no-warnings
-                              (dom-text (dom-child-by-tag pt 'name))))))))
-    (osm--revert)
-    (osm--goto (/ (+ min-lat max-lat) 2) (/ (+ min-lon max-lon) 2)
-               (osm--boundingbox-to-zoom min-lat max-lat min-lon max-lon)
-               nil nil nil)))
+    (osm--add-dataset
+     (abbreviate-file-name file)
+     'osm-file
+     (cl-loop
+      for trk in (dom-children dom)
+      if (eq (dom-tag trk) 'trk) nconc
+      (cl-loop
+       for seg in (dom-children trk)
+       if (eq (dom-tag seg) 'trkseg) collect
+       (cl-loop
+        for pt in (dom-children seg)
+        if (eq (dom-tag pt) 'trkpt) collect
+        (cons (string-to-number (dom-attr pt 'lat))
+              (string-to-number (dom-attr pt 'lon))))))
+     (cl-loop
+      for pt in (dom-children dom)
+      if (eq (dom-tag pt) 'wpt) collect
+      (list (string-to-number (dom-attr pt 'lat))
+            (string-to-number (dom-attr pt 'lon))
+            (with-no-warnings
+              (dom-text (dom-child-by-tag pt 'name))))))))
 
-(defun osm-gpx-hide (file)
-  "Show the tracks of gpx FILE in an `osm-mode' buffer."
-  (interactive (list (completing-read "GPX file: "
-                                      (or osm--gpx-files
-                                          (error "No GPX files shown"))
+(defun osm--add-dataset (name id track waypoints)
+  "Add dataset with NAME and ID consisting of TRACK and WAYPOINTS."
+  (let* ((bb (osm--bb-from-track track waypoints))
+         (center (osm--bb-center bb)))
+    (setf (alist-get name osm--datasets nil nil #'equal)
+          (list id track waypoints))
+    (osm--revert)
+    (osm--goto (car center) (cdr center) (osm--bb-to-zoom bb) nil nil nil)))
+
+(defun osm-hide (name)
+  "Hide dataset with NAME."
+  (interactive (list (completing-read "Hide: "
+                                      (or osm--datasets
+                                          (error "No datasets shown"))
                                       nil t nil 'file-name-history)))
-  (cl-callf2 assoc-delete-all file osm--gpx-files)
+  (cl-callf2 assoc-delete-all name osm--datasets)
   (osm--revert))
 
 (defun osm--server-annotation (cand)

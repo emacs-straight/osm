@@ -10,7 +10,7 @@ servers via the `curl' program.  The package comes with a list of
 multiple preconfigured tile servers. You can bookmark your favorite
 locations using regular Emacs bookmarks or create links from Org files
 to locations. Furthermore the package provides commands to search for
-locations by name and to open and display GPX tracks.
+locations, or plan routes by name and to open and display GPX tracks.
 
 Table of Contents
 ─────────────────
@@ -161,12 +161,13 @@ Table of Contents
 
   • `h': `osm-home' - Open new map at home coordinates
   • `s': `osm-search' - Search and jump to location
+  • `r': `osm-route' - Search for a route between two locations
   • `t': `osm-goto' - Go to coordinates
   • `u': `osm-url' - Go to Geo URL, OpenStreetMap.org or Google Maps
     URL.
   • `v': `osm-server' - Select server
   • `j': `osm-jump' - Jump to pin (bookmark or POI)
-  • `x': `osm-gpx-show' - Show GPX file in map viewer
+  • `f': `osm-open' - Open GPX file in map viewer
 
   Some additional key bindings are available in Osm buffers:
 
@@ -184,7 +185,7 @@ Table of Contents
     point)
   • `n': `osm-rename' - Rename selected pin
   • `c': `osm-center' - Center to currently selected pin
-  • `X': `osm-gpx-hide' - Hide overlays from GPX file
+  • `F', `R': `osm-hide' - Hide GPX file or route
   • `l': `org-store-link' - Store Org link
   • `u': `osm-save-url' - Save geo url in the kill ring
   • `b': `osm-bookmark-set' - Set bookmark
