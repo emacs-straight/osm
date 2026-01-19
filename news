@@ -1,0 +1,165 @@
+                          ━━━━━━━━━━━━━━━━━━━━
+                           OSM.EL - CHANGELOG
+                          ━━━━━━━━━━━━━━━━━━━━
+
+
+1 Version 2.1 (2026-01-09)
+══════════════════════════
+
+  • Remove `:subdomains' support from server configuration. Most servers
+    use the same IP for subdomains or even provide only a single
+    subdomain.
+  • Update connection settings.
+  • Add support for TCX files.
+
+
+2 Version 2.0 (2025-12-28)
+══════════════════════════
+
+  • Add `osm-route' command to plan routes via the OSRM routing service.
+  • Renamed `osm-gpx-hide' to generic `osm-hide', since the command can
+    also hide routes.
+  • Renamed `osm-gpx-open' to generic `osm-open' in preparation of
+    support for other file formats.
+  • `osm-delete' can hide routes or files if a corresponding pin has
+    been selected.
+  • Server list updated: URLs updated and unmaintained servers removed.
+  • Add support for tiles in the `webp' image format.
+
+
+3 Version 1.12 (2025-12-21)
+═══════════════════════════
+
+  • Make sure that `--disable' is passed as first argument to curl.
+
+
+4 Version 1.11 (2025-12-19)
+═══════════════════════════
+
+  • New command `osm-url' which handles standard Geo, OpenStreetMap.org
+    and Google Maps URLs.
+  • Register `osm-url' for both `geo:' and Google Maps URLs.
+
+
+5 Version 1.10 (2025-11-30)
+═══════════════════════════
+
+  • Disable `mouse-shift-adjust-mode' locally.
+
+
+6 Version 1.9 (2025-10-17)
+══════════════════════════
+
+  • Fix search bug introduced in 1.8.
+
+
+7 Version 1.8 (2025-10-13)
+══════════════════════════
+
+  • Require Emacs 29.
+  • Use `eager-display' for the default completion UI.
+
+
+8 Version 1.7 (2025-04-04)
+══════════════════════════
+
+  • Fix touchscreen support.
+
+
+9 Version 1.6 (2025-01-28)
+══════════════════════════
+
+  • Mark gpx track start with a pin.
+  • Add `imenu' support.
+
+
+10 Version 1.5 (2024-12-22)
+═══════════════════════════
+
+  • Require Emacs 28.1.
+  • `osm-server-list': Add `:ext' server property.
+
+
+11 Version 1.4 (2024-07-24)
+═══════════════════════════
+
+  • Bump Compat dependency to Compat 30.
+
+
+12 Version 1.3 (2024-01-22)
+═══════════════════════════
+
+  • Add `osm-jump' command to jump to pins (bookmarks, way points, POIs)
+    by name.
+
+
+13 Version 1.2 (2023-12-27)
+═══════════════════════════
+
+  • Store names for track way points.
+  • Add `osm-rename' command to rename both bookmarks and track way
+    points.
+  • Remove `osm-max-cache' customization variable.
+
+
+14 Version 1.1 (2023-12-23)
+═══════════════════════════
+
+  • `osm--purge-tile-cache': Delete empty tile cache directories.
+  • `osm-search': Add message when contacting the server.
+  • `osm-delete': New command to delete track or bookmark pins.
+  • `osm-mouse-select': New command to select pin.
+  • `osm-bookmark-delete': Add confirmation.
+  • `osm-org-link-click': Remove, use `org-store-link' instead.
+  • Rename `osm-transient-click' to `osm-mouse-pin'.
+  • Unify `osm-bookmark-set' and `osm-bookmark-set-click'.
+  • Add distance measurement for manual track. Press `S-<mouse-1>'
+    (`osm-mouse-track') to place the pins of the track.
+  • Add `osm-max-cache' to keep image cache size in check.
+
+
+15 Version 1.0 (2023-12-01)
+═══════════════════════════
+
+  • `osm-search-server': New customization option.
+  • Automatically register Org geo links. `osm-ol.el' has been removed
+    and should not be required anymore from the `init.el'.
+
+
+16 Version 0.14 (2023-10-14)
+════════════════════════════
+
+  • Compatibility with `pixel-scroll-precision-mode'.
+  • Update list of servers.
+  • Add `osm-add-server' utility function with error checking.
+  • `osm-search': Improve UI if default completions buffer is used.
+
+
+17 Version 0.13 (2023-07-02)
+════════════════════════════
+
+  • Provide `osm-prefix-map'.
+  • `osm-server-list': Add support for an api-key placeholder `%k' in
+    the server `:url'.
+
+
+18 Version 0.12 (2023-05-01)
+════════════════════════════
+
+  • Autoload bugfix for Emacs 27
+  • Use `easy-menu-define' to make sure that the menu bar and the mode
+    line both get the OSM mouse menu.
+
+
+19 Version 0.11 (2023-04-17)
+════════════════════════════
+
+  • Ensure that mouse pointer is an arrow over the map.
+  • Use `natnum' defcustom type.
+  • Ignore mouse drags to avoid region marking.
+
+
+20 Version 0.10 (2023-02-15)
+════════════════════════════
+
+  • Start of changelog.
