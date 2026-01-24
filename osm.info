@@ -25,7 +25,7 @@ tracks.
 
 * Features::
 * Configuration::
-* Bookmarks, Org links, Geo URLs and Elisp links: Bookmarks Org links Geo URLs and Elisp links.
+* Bookmarks, Org links, Geo URLs, Google Maps and Elisp links: Bookmarks Org links Geo URLs Google Maps and Elisp links.
 * Distance measurement::
 * Commands and Key Bindings::
 * Related projects::
@@ -52,7 +52,7 @@ File: osm.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: Top
    • Multiple preconfigured tile servers
 
 
-File: osm.info,  Node: Configuration,  Next: Bookmarks Org links Geo URLs and Elisp links,  Prev: Features,  Up: Top
+File: osm.info,  Node: Configuration,  Next: Bookmarks Org links Geo URLs Google Maps and Elisp links,  Prev: Features,  Up: Top
 
 2 Configuration
 ***************
@@ -87,13 +87,15 @@ server configurations, e.g., Google Maps for satellite and aerial maps.
      )
 
 
-File: osm.info,  Node: Bookmarks Org links Geo URLs and Elisp links,  Next: Distance measurement,  Prev: Configuration,  Up: Top
+File: osm.info,  Node: Bookmarks Org links Geo URLs Google Maps and Elisp links,  Next: Distance measurement,  Prev: Configuration,  Up: Top
 
-3 Bookmarks, Org links, Geo URLs and Elisp links
-************************************************
+3 Bookmarks, Org links, Geo URLs, Google Maps and Elisp links
+*************************************************************
 
-There exist multiple methods to store a location, such that you can
-return there afterwards.
+Osm.el registers itself as handler for map URLs (Geo URLs and Google
+Maps) via the ‘browse-url-default-handlers’ list.  This way you can open
+these links directly in Emacs.  Furthermore there exist multiple methods
+to store a location as a link.
 
    • ‘b’: Create a bookmark of the current location.  The bookmark is
      stored as an Emacs bookmark in ‘bookmark-alist’.  You can jump to
@@ -140,7 +142,7 @@ mouse.  See the docstrings of the commands ‘osm-bookmark-set’ and
           (osm "Tour Eiffel, Av. Gustave Eiffel, Paris") ;; Address link
 
 
-File: osm.info,  Node: Distance measurement,  Next: Commands and Key Bindings,  Prev: Bookmarks Org links Geo URLs and Elisp links,  Up: Top
+File: osm.info,  Node: Distance measurement,  Next: Commands and Key Bindings,  Prev: Bookmarks Org links Geo URLs Google Maps and Elisp links,  Up: Top
 
 4 Distance measurement
 **********************
@@ -225,15 +227,15 @@ copyright assignment to the FSF.
 
 Tag Table:
 Node: Top203
-Node: Features1136
-Node: Configuration1767
-Node: Bookmarks Org links Geo URLs and Elisp links3252
-Ref: Org link examples4476
-Ref: Elisp link examples5364
-Node: Distance measurement6105
-Node: Commands and Key Bindings6689
-Node: Related projects9000
-Node: Contributions9451
+Node: Features1161
+Node: Configuration1792
+Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3289
+Ref: Org link examples4708
+Ref: Elisp link examples5596
+Node: Distance measurement6337
+Node: Commands and Key Bindings6933
+Node: Related projects9244
+Node: Contributions9695
 
 End Tag Table
 
