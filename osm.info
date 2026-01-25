@@ -73,8 +73,10 @@ server configurations, e.g., Google Maps for satellite and aerial maps.
 
        :custom
        ;; Take a look at the customization group `osm' for more options.
-       (osm-server 'default) ;; Configure the tile server
-       (osm-copyright t)     ;; Display the copyright information
+       (osm-default-server 'default) ;; Configure the tile server
+       (osm-default-zoom 15)         ;; Default zoom level
+       (osm-copyright t)             ;; Display the copyright information
+       (osm-home (list 0 0 3))       ;; Home, configure `calendar-latitude/longitude' instead
 
        :config
 
@@ -229,13 +231,13 @@ Tag Table:
 Node: Top203
 Node: Features1161
 Node: Configuration1792
-Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3289
-Ref: Org link examples4708
-Ref: Elisp link examples5596
-Node: Distance measurement6337
-Node: Commands and Key Bindings6933
-Node: Related projects9244
-Node: Contributions9695
+Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3458
+Ref: Org link examples4877
+Ref: Elisp link examples5765
+Node: Distance measurement6506
+Node: Commands and Key Bindings7102
+Node: Related projects9413
+Node: Contributions9864
 
 End Tag Table
 
