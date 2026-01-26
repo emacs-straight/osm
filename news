@@ -3,8 +3,8 @@
                           ━━━━━━━━━━━━━━━━━━━━
 
 
-1 Development
-═════════════
+1 Version 2.2 (2026-01-25)
+══════════════════════════
 
   • Improve Google Map link handling.
   • New customizable `osm-default-zoom'.
