@@ -1,4 +1,4 @@
-This is osm.info, produced by makeinfo version 7.1.1 from osm.texi.
+This is osm.info, produced by makeinfo version 7.2 from osm.texi.
 
 INFO-DIR-SECTION Emacs misc features
 START-INFO-DIR-ENTRY
@@ -29,7 +29,6 @@ tracks.
 * Distance measurement::
 * Commands and Key Bindings::
 * Related projects::
-* Contributions::
 
 
 File: osm.info,  Node: Features,  Next: Configuration,  Prev: Top,  Up: Top
@@ -57,7 +56,7 @@ File: osm.info,  Node: Configuration,  Next: Bookmarks Org links Geo URLs Google
 2 Configuration
 ***************
 
-The package is available on GNU ELPA and can be installed with
+The package is available from MELPA and can be installed with
 ‘package-install’.  Note that Osm.el requires Emacs 29 and depends on
 the external ‘curl’ program.  Emacs must be built with ‘libxml’,
 ‘librsvg’, ‘libjpeg’, ‘libpng’ and ‘libwebp’ support.  Emacs 30 comes
@@ -202,7 +201,7 @@ sufficient to press the key ‘s’ only to initiate a search.
    • ‘o’: ‘clone-buffer’ - Clone buffer
 
 
-File: osm.info,  Node: Related projects,  Next: Contributions,  Prev: Commands and Key Bindings,  Up: Top
+File: osm.info,  Node: Related projects,  Prev: Commands and Key Bindings,  Up: Top
 
 6 Related projects
 ******************
@@ -216,32 +215,21 @@ There have been other attempts at map viewers in Emacs before.
    • <https://github.com/mkcms/gpx-mode>
 
 
-File: osm.info,  Node: Contributions,  Prev: Related projects,  Up: Top
-
-7 Contributions
-***************
-
-Since this package is part of GNU ELPA
-(https://elpa.gnu.org/packages/osm.html) contributions require a
-copyright assignment to the FSF.
-
-
-
 Tag Table:
-Node: Top203
-Node: Features1161
-Node: Configuration1792
-Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3458
-Ref: Org link examples4877
-Ref: Elisp link examples5765
-Node: Distance measurement6506
-Node: Commands and Key Bindings7102
-Node: Related projects9413
-Node: Contributions9864
+Node: Top201
+Node: Features1141
+Node: Configuration1772
+Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3437
+Ref: Org link examples4856
+Ref: Elisp link examples5744
+Node: Distance measurement6485
+Node: Commands and Key Bindings7081
+Node: Related projects9392
 
 End Tag Table
 
 
 Local Variables:
 coding: utf-8
+Info-documentlanguage: en
 End:

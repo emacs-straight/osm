@@ -22,7 +22,6 @@ Table of Contents
 4. Distance measurement
 5. Commands and Key Bindings
 6. Related projects
-7. Contributions
 
 
 1 Features
@@ -46,7 +45,7 @@ Table of Contents
 2 Configuration
 ═══════════════
 
-  The package is available on GNU ELPA and can be installed with
+  The package is available from MELPA and can be installed with
   `package-install'.  Note that Osm.el requires Emacs 29 and depends on
   the external `curl' program.  Emacs must be built with `libxml',
   `librsvg', `libjpeg', `libpng' and `libwebp' support.  Emacs 30 comes
@@ -211,13 +210,3 @@ Table of Contents
   • <https://github.com/jd/google-maps.el>
   • <https://github.com/emacsattic/org-osm-link>
   • <https://github.com/mkcms/gpx-mode>
-
-
-7 Contributions
-═══════════════
-
-  Since this package is part of [GNU ELPA] contributions require a
-  copyright assignment to the FSF.
-
-
-[GNU ELPA] <https://elpa.gnu.org/packages/osm.html>

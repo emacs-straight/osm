@@ -7,8 +7,6 @@
 #+texinfo_dir_desc: OpenStreetMap viewer for Emacs
 
 #+html: <a href="https://www.gnu.org/software/emacs/"><img alt="GNU Emacs" src="https://github.com/minad/corfu/blob/screenshots/emacs.svg?raw=true"/></a>
-#+html: <a href="https://elpa.gnu.org/packages/osm.html"><img alt="GNU ELPA" src="https://elpa.gnu.org/packages/osm.svg"/></a>
-#+html: <a href="https://elpa.gnu.org/devel/osm.html"><img alt="GNU-devel ELPA" src="https://elpa.gnu.org/devel/osm.svg"/></a>
 #+html: <a href="https://melpa.org/#/osm"><img alt="MELPA" src="https://melpa.org/packages/osm-badge.svg"/></a>
 #+html: <a href="https://stable.melpa.org/#/osm"><img alt="MELPA Stable" src="https://stable.melpa.org/packages/osm-badge.svg"/></a>
 #+html: <img src="https://github.com/minad/osm/blob/screenshots/osm.png?raw=true"/><p><i>The map data is © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, licensed under the <a href="https://opendatacommons.org/licenses/odbl/">ODbL</a></i></p>
@@ -41,7 +39,7 @@ for locations, or plan routes by name and to open and display GPX or TCX tracks.
 
 * Configuration
 
-The package is available on GNU ELPA and can be installed with =package-install=.
+The package is available from MELPA and can be installed with =package-install=.
 Note that Osm.el requires Emacs 29 and depends on the external =curl= program.
 Emacs must be built with =libxml=, =librsvg=, =libjpeg=, =libpng= and =libwebp= support.
 Emacs 30 comes with a native JSON parser, while on Emacs 29, =libjansson= is
@@ -176,8 +174,3 @@ There have been other attempts at map viewers in Emacs before.
 - https://github.com/jd/google-maps.el
 - https://github.com/emacsattic/org-osm-link
 - https://github.com/mkcms/gpx-mode
-
-* Contributions
-
-Since this package is part of [[https://elpa.gnu.org/packages/osm.html][GNU ELPA]] contributions require a copyright
-assignment to the FSF.
