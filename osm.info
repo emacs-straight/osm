@@ -56,13 +56,15 @@ File: osm.info,  Node: Configuration,  Next: Bookmarks Org links Geo URLs Google
 2 Configuration
 ***************
 
-The package is available from MELPA and can be installed with
-‘package-install’.  Note that Osm.el requires Emacs 29 and depends on
-the external ‘curl’ program.  Emacs must be built with ‘libxml’,
-‘librsvg’, ‘libjpeg’, ‘libpng’ and ‘libwebp’ support.  Emacs 30 comes
-with a native JSON parser, while on Emacs 29, ‘libjansson’ is needed.
-The following is an example configuration which relies on ‘use-package’.
-Please take a look at the OpenStreetMap Wiki
+The package is available from ELPA
+(https://elpa.gnu.org/packages/osm.html) or MELPA
+(https://melpa.org/#/osm) and can be installed with ‘package-install’.
+Note that Osm.el requires Emacs 29 and depends on the external ‘curl’
+program.  Emacs must be built with ‘libxml’, ‘librsvg’, ‘libjpeg’,
+‘libpng’ and ‘libwebp’ support.  Emacs 30 comes with a native JSON
+parser, while on Emacs 29, ‘libjansson’ is needed.  The following is an
+example configuration which relies on ‘use-package’.  Please take a look
+at the OpenStreetMap Wiki
 (https://wiki.openstreetmap.org/wiki/Raster_tile_providers) and the
 Osm.el Wiki (https://github.com/minad/osm/wiki) for additional tile
 server configurations, e.g., Google Maps for satellite and aerial maps.
@@ -219,12 +221,12 @@ Tag Table:
 Node: Top201
 Node: Features1141
 Node: Configuration1772
-Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3437
-Ref: Org link examples4856
-Ref: Elisp link examples5744
-Node: Distance measurement6485
-Node: Commands and Key Bindings7081
-Node: Related projects9392
+Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3513
+Ref: Org link examples4932
+Ref: Elisp link examples5820
+Node: Distance measurement6561
+Node: Commands and Key Bindings7157
+Node: Related projects9468
 
 End Tag Table
 
