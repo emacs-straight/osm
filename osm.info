@@ -1,4 +1,4 @@
-This is osm.info, produced by makeinfo version 7.2 from osm.texi.
+This is osm.info, produced by makeinfo version 7.1.1 from osm.texi.
 
 INFO-DIR-SECTION Emacs misc features
 START-INFO-DIR-ENTRY
@@ -216,22 +216,22 @@ There have been other attempts at map viewers in Emacs before.
    • <https://github.com/emacsattic/org-osm-link>
    • <https://github.com/mkcms/gpx-mode>
 
+
 
 Tag Table:
-Node: Top201
-Node: Features1141
-Node: Configuration1772
-Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3513
-Ref: Org link examples4932
-Ref: Elisp link examples5820
-Node: Distance measurement6561
-Node: Commands and Key Bindings7157
-Node: Related projects9468
+Node: Top203
+Node: Features1143
+Node: Configuration1774
+Node: Bookmarks Org links Geo URLs Google Maps and Elisp links3515
+Ref: Org link examples4934
+Ref: Elisp link examples5822
+Node: Distance measurement6563
+Node: Commands and Key Bindings7159
+Node: Related projects9470
 
 End Tag Table
 
 
 Local Variables:
 coding: utf-8
-Info-documentlanguage: en
 End:
