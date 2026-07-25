@@ -299,6 +299,10 @@ Should be at least 7 days according to the server usage policies."
   "<drag-mouse-1>" #'ignore
   "<drag-mouse-2>" #'ignore
   "<drag-mouse-3>" #'ignore
+  "<wheel-up>" #'osm-mouse-zoom-in
+  "<wheel-down>" #'osm-mouse-zoom-out
+  "<wheel-left>" #'ignore
+  "<wheel-right>" #'ignore
   "<up>" #'osm-up
   "<down>" #'osm-down
   "<left>" #'osm-left
@@ -689,16 +693,20 @@ Local per buffer since the overlays depend on the zoom level.")
                                       'mouse-movement))
                        (lambda () (setq track-mouse nil)))))
 
-(defun osm--zoom-in-wheel (_n)
-  "Zoom in with the mouse wheel."
-  (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
+(defun osm-mouse-zoom-in (event)
+  "Zoom in with the mouse wheel given EVENT."
+  (declare (completion ignore))
+  (interactive "@e")
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (when (< osm--zoom (osm--server-get :max-zoom))
       (osm--move (/ (- x osm--wx) 2) (/ (- y osm--wy) 2))
       (osm-zoom-in))))
 
-(defun osm--zoom-out-wheel (_n)
-  "Zoom out with the mouse wheel."
-  (pcase-let ((`(,x . ,y) (posn-x-y (event-start last-input-event))))
+(defun osm-mouse-zoom-out (event)
+  "Zoom out with the mouse wheel given EVENT."
+  (declare (completion ignore))
+  (interactive "@e")
+  (pcase-let ((`(,x . ,y) (posn-x-y (event-start event))))
     (when (> osm--zoom (osm--server-get :min-zoom))
       (osm--move (- osm--wx x) (- osm--wy y))
       (osm-zoom-out))))
@@ -917,15 +925,10 @@ Local per buffer since the overlays depend on the zoom level.")
               default-directory (expand-file-name "~/")
               eldoc-documentation-functions nil
               mouse-wheel-progressive-speed nil
-              mwheel-scroll-up-function #'osm--zoom-out-wheel
-              mwheel-scroll-down-function #'osm--zoom-in-wheel
-              mwheel-scroll-left-function #'osm--zoom-out-wheel
-              mwheel-scroll-right-function #'osm--zoom-in-wheel
               bookmark-make-record-function #'osm--bookmark-record-default
               imenu-create-index-function #'osm--imenu-index
-              mouse-shift-adjust-mode nil)
-  (when (boundp 'mwheel-coalesce-scroll-events)
-    (setq-local mwheel-coalesce-scroll-events t))
+              mouse-shift-adjust-mode nil
+              mwheel-coalesce-scroll-events t)
   (when (boundp 'pixel-scroll-precision-mode)
     (setq-local pixel-scroll-precision-mode nil))
   (add-hook 'change-major-mode-hook #'osm--barf-change-mode nil 'local)
