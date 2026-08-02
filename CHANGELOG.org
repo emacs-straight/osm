@@ -2,6 +2,10 @@
 #+author: Daniel Mendler
 #+language: en
 
+* Version 2.5 (2026-08-01)
+
+- Handle mouse wheel events directly.
+
 * Version 2.4 (2026-07-05)
 
 - Support non-numeric calendar coordinates.
