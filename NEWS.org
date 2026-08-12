@@ -1,4 +1,4 @@
-#+title: osm.el - Changelog
+#+title: osm.el - News
 #+author: Daniel Mendler
 #+language: en
 
